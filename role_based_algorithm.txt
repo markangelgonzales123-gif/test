@@ -1,0 +1,314 @@
+// ROLE-BASED ACCESS CONTROL ALGORITHM - PHP IMPLEMENTATION
+
+/**
+ * EPMS - Employee Performance Management System
+ * Role-Based Access Control Implementations
+ * 
+ * This algorithm controls access to various parts of the system
+ * based on user roles and relationships.
+ */
+
+/**
+ * User Roles in EPMS System:
+ * 1. Admin - Full system access 
+ * 2. President - Institution-wide access
+ * 3. Department Head - Department-level access
+ * 4. Regular Employee - Personal access only
+ */
+
+/**
+ * Permission Matrix:
+ * 
+ * Admin:
+ * - Can manage all users and departments
+ * - Can view and edit all records
+ * - Can review and approve/reject all records
+ * 
+ * President:
+ * - Can view all records from all departments
+ * - Can review and approve/reject all records
+ * - Can access institution-wide reports
+ * 
+ * Department Head:
+ * - Can view records from their department
+ * - Can review and approve/reject records from their department (except their own)
+ * - Can edit records from their department if in Draft or Pending status
+ * - Can access department-level reports
+ * 
+ * Regular Employee:
+ * - Can view only their own records
+ * - Can edit only their own records if in Draft status
+ * - Can create new records for themselves
+ */
+
+// From view_record.php - Checking permission to view a record
+function checkViewRecordPermission($record, $user_id, $user_role, $department_id) {
+    $has_permission = false;
+    
+    // The record owner can always view
+    if ($record['user_id'] == $user_id) {
+        $has_permission = true;
+    }
+    // Department head can view records from their department
+    else if ($user_role == 'department_head' && $record['department_id'] == $department_id) {
+        $has_permission = true;
+    }
+    // Admin and president can view all records
+    else if ($user_role == 'admin' || $user_role == 'president') {
+        $has_permission = true;
+    }
+    
+    return $has_permission;
+}
+
+// Actual implementation from view_record.php
+// Check permission to view this record
+$has_permission = false;
+
+// The record owner can always view
+if ($record['user_id'] == $user_id) {
+    $has_permission = true;
+}
+// Department head can view records from their department
+else if ($user_role == 'department_head' && $record['department_id'] == $department_id) {
+    $has_permission = true;
+}
+// Admin and president can view all records
+else if ($user_role == 'admin' || $user_role == 'president') {
+    $has_permission = true;
+}
+
+if (!$has_permission) {
+    $_SESSION['error_message'] = "You don't have permission to view this record!";
+    header("Location: records.php");
+    exit();
+}
+
+// From view_record.php - Checking permission to review/approve a record
+function checkReviewPermission($user_role, $department_id, $record_department_id, $record_user_id, $user_id) {
+    $can_review = ($user_role == 'department_head' && $record_department_id == $department_id && $record_user_id != $user_id) || 
+                  ($user_role == 'president') ||
+                  ($user_role == 'admin');
+                  
+    return $can_review;
+}
+
+// Actual implementation from view_record.php
+// Verify user has permission to approve/reject
+$can_review = ($user_role == 'department_head' && $record['department_id'] == $department_id && $record['user_id'] != $user_id) || 
+              ($user_role == 'president') ||
+              ($user_role == 'admin');
+
+if (!$can_review) {
+    $_SESSION['error_message'] = "You don't have permission to review this record!";
+    header("Location: view_record.php?id=" . $record_id);
+    exit();
+}
+
+// From edit_record.php - Checking permission to edit a record
+function checkEditRecordPermission($record, $user_id, $user_role, $user_department_id) {
+    $can_edit = false;
+    
+    // Record owner can edit their own record if it's a draft
+    if ($record['user_id'] == $user_id && $record['status'] == 'Draft') {
+        $can_edit = true;
+    }
+    // Department head can edit records from their department if they're pending or draft
+    else if ($user_role == 'department_head' && $user_department_id == $record['department_id']) {
+        $can_edit = ($record['status'] == 'Pending' || $record['status'] == 'Draft');
+    }
+    // Admin can edit all records
+    else if ($user_role == 'admin') {
+        $can_edit = true;
+    }
+    // President can edit all records
+    else if ($user_role == 'president') {
+        $can_edit = true;
+    }
+    
+    return $can_edit;
+}
+
+// Actual implementation from edit_record.php
+// Check permissions - users can only edit their own records or if they have appropriate roles
+$can_edit = false;
+
+// Record owner can edit their own record if it's a draft
+if ($record['user_id'] == $user_id && $record['status'] == 'Draft') {
+    $can_edit = true;
+}
+// Department head can edit records from their department if they're pending or draft
+else if ($user_role == 'department_head' && $user_department_id == $record['department_id']) {
+    $can_edit = ($record['status'] == 'Pending' || $record['status'] == 'Draft');
+} 
+// Admin can edit all records
+else if ($user_role == 'admin') {
+    $can_edit = true;
+}
+// President can edit all records
+else if ($user_role == 'president') {
+    $can_edit = true;
+}
+
+// If user doesn't have permission to edit
+if (!$can_edit) {
+    header("Location: access_denied.php");
+    exit();
+}
+
+// From delete_record.php - Checking permission to delete a record
+// Check if the user has permission to delete this record
+if ($record['user_id'] != $user_id && $user_role != 'admin') {
+    $_SESSION['error_message'] = "You don't have permission to delete this record.";
+    header("Location: records.php");
+    exit();
+}
+
+// From includes/sidebar.php - Role-based Menu Generation
+// Define menu items based on roles
+$menu_items = [];
+
+switch ($_SESSION['user_role']) {
+    case 'regular_employee':
+        // Regular employees can access IPCR & IDP
+        $menu_items = [
+            ['icon' => 'bi bi-speedometer2', 'title' => 'Dashboard', 'url' => $base_path . 'dashboard.php', 'active' => ($current_page == 'dashboard.php')],
+            ['icon' => 'bi bi-person-vcard', 'title' => 'My IPCR', 'url' => $base_path . 'ipcr.php', 'active' => ($current_page == 'ipcr.php')],
+            ['icon' => 'bi bi-journal-text', 'title' => 'My IDP', 'url' => $base_path . 'idp.php', 'active' => ($current_page == 'idp.php')],
+            ['icon' => 'bi bi-list-check', 'title' => 'My Records', 'url' => $base_path . 'records.php', 'active' => ($current_page == 'records.php')],
+            ['icon' => 'bi bi-person-fill', 'title' => 'My Profile', 'url' => $base_path . 'profile.php', 'active' => ($current_page == 'profile.php')]
+        ];
+        break;
+        
+    case 'department_head':
+        // Department heads have additional access to department records
+        $menu_items = [
+            ['icon' => 'bi bi-speedometer2', 'title' => 'Dashboard', 'url' => $base_path . 'dashboard.php', 'active' => ($current_page == 'dashboard.php')],
+            ['icon' => 'bi bi-person-vcard', 'title' => 'My IPCR', 'url' => $base_path . 'ipcr.php', 'active' => ($current_page == 'ipcr.php')],
+            ['icon' => 'bi bi-journal-text', 'title' => 'My IDP', 'url' => $base_path . 'idp.php', 'active' => ($current_page == 'idp.php')],
+            ['icon' => 'bi bi-list-check', 'title' => 'My Records', 'url' => $base_path . 'records.php', 'active' => ($current_page == 'records.php')],
+            ['icon' => 'bi bi-file-text', 'title' => 'Department DPCR', 'url' => $base_path . 'department_dpcr.php', 'active' => ($current_page == 'department_dpcr.php')],
+            ['icon' => 'bi bi-people', 'title' => 'Staff IPCR', 'url' => $base_path . 'staff_ipcr.php', 'active' => ($current_page == 'staff_ipcr.php')],
+            ['icon' => 'bi bi-book', 'title' => 'Staff IDP', 'url' => $base_path . 'staff_idp.php', 'active' => ($current_page == 'staff_idp.php')],
+            ['icon' => 'bi bi-bar-chart', 'title' => 'Department Reports', 'url' => $base_path . 'department_reports.php', 'active' => ($current_page == 'department_reports.php')],
+            ['icon' => 'bi bi-person-fill', 'title' => 'My Profile', 'url' => $base_path . 'profile.php', 'active' => ($current_page == 'profile.php')]
+        ];
+        break;
+        
+    case 'admin':
+        // Admins have full system access
+        $menu_items = [
+            ['icon' => 'bi bi-speedometer2', 'title' => 'Dashboard', 'url' => $base_path . 'dashboard.php', 'active' => ($current_page == 'dashboard.php')],
+            ['icon' => 'bi bi-people', 'title' => 'Users', 'url' => $base_path . $admin_path . 'users.php', 'active' => ($current_page == 'users.php')],
+            ['icon' => 'bi bi-building', 'title' => 'Departments', 'url' => $base_path . $admin_path . 'departments.php', 'active' => ($current_page == 'departments.php')],
+            ['icon' => 'bi bi-list-check', 'title' => 'All Records', 'url' => $base_path . 'records.php', 'active' => ($current_page == 'records.php')],
+            ['icon' => 'bi bi-gear', 'title' => 'System Settings', 'url' => $base_path . $admin_path . 'settings.php', 'active' => ($current_page == 'settings.php')],
+            ['icon' => 'bi bi-bar-chart', 'title' => 'Reports', 'url' => $base_path . 'reports.php', 'active' => ($current_page == 'reports.php')],
+            ['icon' => 'bi bi-person-fill', 'title' => 'My Profile', 'url' => $base_path . 'profile.php', 'active' => ($current_page == 'profile.php')]
+        ];
+        break;
+        
+    case 'president':
+        // President has institution-wide view
+        $menu_items = [
+            ['icon' => 'bi bi-speedometer2', 'title' => 'Dashboard', 'url' => $base_path . 'dashboard.php', 'active' => ($current_page == 'dashboard.php')],
+            ['icon' => 'bi bi-building', 'title' => 'Departments', 'url' => $base_path . 'departments.php', 'active' => ($current_page == 'departments.php')],
+            ['icon' => 'bi bi-list-check', 'title' => 'All Records', 'url' => $base_path . 'records.php', 'active' => ($current_page == 'records.php')],
+            ['icon' => 'bi bi-bar-chart', 'title' => 'Institution Reports', 'url' => $base_path . 'reports.php', 'active' => ($current_page == 'reports.php')],
+            ['icon' => 'bi bi-person-fill', 'title' => 'My Profile', 'url' => $base_path . 'profile.php', 'active' => ($current_page == 'profile.php')]
+        ];
+        break;
+}
+
+// From includes/sidebar.php - Special handling for Department Heads
+// Check for pending submissions if user is a department head
+$has_pending_submissions = false;
+$pending_count = 0;
+
+if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'department_head') {
+    // Database connection
+    $host = "localhost";
+    $username = "root";
+    $password = "";
+    $database = "epms_db";
+    
+    $conn = new mysqli($host, $username, $password, $database);
+    
+    if (!$conn->connect_error) {
+        $department_id = $_SESSION['user_department_id'];
+        
+        // Check for pending submissions in the last 24 hours
+        $check_query = "SELECT COUNT(*) as pending_count FROM records r 
+                      JOIN users u ON r.user_id = u.id
+                      WHERE u.department_id = ? AND r.status = 'Pending' AND r.form_type = 'IPCR'
+                      AND r.date_submitted > DATE_SUB(NOW(), INTERVAL 1 DAY)";
+        
+        $stmt = $conn->prepare($check_query);
+        $stmt->bind_param("i", $department_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($row = $result->fetch_assoc()) {
+            $pending_count = $row['pending_count'];
+            if ($pending_count > 0) {
+                $has_pending_submissions = true;
+            }
+        }
+        
+        $stmt->close();
+        $conn->close();
+    }
+}
+
+// From access_denied.php - Role-based access denial display
+if(isset($_SESSION['user_role'])): 
+    $role_display = "User";
+    switch ($_SESSION['user_role']) {
+        case 'admin':
+            $role_display = "Administrator";
+            break;
+        case 'president':
+            $role_display = "President";
+            break;
+        case 'department_head':
+            $role_display = "Department Head";
+            break;
+        case 'regular_employee':
+            $role_display = "Employee";
+            break;
+    }
+endif;
+
+// From admin/users.php - Role update handling for department heads
+// If updating users and roles affect department heads
+if ($current_data['role'] !== 'department_head' && $role === 'department_head' && $department_id !== null) {
+    // User became a department head, update the department
+    $update_dept = $conn->prepare("UPDATE departments SET head_id = ? WHERE id = ?");
+    $update_dept->bind_param("ii", $user_id, $department_id);
+    $update_dept->execute();
+} elseif ($current_data['role'] === 'department_head' && $role !== 'department_head') {
+    // User is no longer a department head, remove as head
+    $update_dept = $conn->prepare("UPDATE departments SET head_id = NULL WHERE head_id = ?");
+    $update_dept->bind_param("i", $user_id);
+    $update_dept->execute();
+} elseif ($role === 'department_head' && $current_data['department_id'] !== $department_id) {
+    // Department head changed departments
+    // Remove as head from old department
+    if ($current_data['department_id'] !== null) {
+        $remove_old = $conn->prepare("UPDATE departments SET head_id = NULL WHERE head_id = ?");
+        $remove_old->bind_param("i", $user_id);
+        $remove_old->execute();
+    }
+    
+    // Add as head to new department
+    if ($department_id !== null) {
+        $add_new = $conn->prepare("UPDATE departments SET head_id = ? WHERE id = ?");
+        $add_new->bind_param("ii", $user_id, $department_id);
+        $add_new->execute();
+    }
+}
+
+// Role-based Admin Section Access Control
+function canAccessAdminSection($user_role) {
+    return $user_role === 'admin';
+} 

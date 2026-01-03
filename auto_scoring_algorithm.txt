@@ -1,0 +1,192 @@
+// AUTO SCORING ALGORITHM FOR IPCR RATING - PHP IMPLEMENTATION
+
+/**
+ * EPMS - Employee Performance Management System
+ * Auto Scoring Algorithm for IPCR
+ * 
+ * This algorithm calculates the rating for Individual Performance Commitment and Review (IPCR)
+ * based on three components: Quality (Q), Efficiency (E), and Timeliness (T).
+ * The system calculates both self-rating and supervisor rating.
+ * 
+ * Weight Distribution:
+ * - Strategic Functions: 45%
+ * - Core Functions: 55%
+ */
+
+// JavaScript implementation in the front-end for real-time calculation
+function calculateAverage(inputs, averageField) {
+    let sum = 0;
+    let count = 0;
+    
+    inputs.forEach(input => {
+        if (input.value) {
+            sum += parseInt(input.value);
+            count++;
+        }
+    });
+    
+    const average = count > 0 ? (sum / count).toFixed(2) : '';
+    averageField.value = average;
+}
+
+// Function to attach event listeners to rating inputs
+function attachRatingListeners(row) {
+    const selfRatingInputs = row.querySelectorAll('.self-rating');
+    const supervisorRatingInputs = row.querySelectorAll('.supervisor-rating');
+    const averageRating = row.querySelector('.average-rating');
+    const supervisorAverage = row.querySelector('.supervisor-average');
+    
+    selfRatingInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            calculateAverage(selfRatingInputs, averageRating);
+        });
+    });
+    
+    supervisorRatingInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            calculateAverage(supervisorRatingInputs, supervisorAverage);
+        });
+    });
+}
+
+// PHP implementation for parsing IPCR entries from the database
+// Strategic Functions (45% weight)
+if (isset($content['strategic_functions']) && is_array($content['strategic_functions'])) {
+    foreach ($content['strategic_functions'] as $func) {
+        $strategic_entries[] = [
+            'major_output' => $func['mfo'] ?? '',
+            'success_indicators' => $func['indicators'] ?? '',
+            'actual_accomplishments' => $func['accomplishments'] ?? '',
+            // Self ratings
+            'q_rating' => $func['q'] ?? '',
+            'e_rating' => $func['e'] ?? '',
+            't_rating' => $func['t'] ?? '',
+            'final_rating' => $func['a'] ?? '',  // The average of Q, E, T ratings
+            // Supervisor ratings
+            'supervisor_q_rating' => $func['supervisor_q'] ?? '',
+            'supervisor_e_rating' => $func['supervisor_e'] ?? '',
+            'supervisor_t_rating' => $func['supervisor_t'] ?? '',
+            'supervisor_final_rating' => $func['supervisor_a'] ?? '',  // The average of Q, E, T supervisor ratings
+            'remarks' => $func['remarks'] ?? ''
+        ];
+    }
+}
+
+// Core Functions (55% weight)
+if (isset($content['core_functions']) && is_array($content['core_functions'])) {
+    foreach ($content['core_functions'] as $func) {
+        $core_entries[] = [
+            'major_output' => $func['mfo'] ?? '',
+            'success_indicators' => $func['indicators'] ?? '',
+            'actual_accomplishments' => $func['accomplishments'] ?? '',
+            // Self ratings
+            'q_rating' => $func['q'] ?? '',
+            'e_rating' => $func['e'] ?? '',
+            't_rating' => $func['t'] ?? '',
+            'final_rating' => $func['a'] ?? '',  // The average of Q, E, T ratings
+            // Supervisor ratings
+            'supervisor_q_rating' => $func['supervisor_q'] ?? '',
+            'supervisor_e_rating' => $func['supervisor_e'] ?? '',
+            'supervisor_t_rating' => $func['supervisor_t'] ?? '',
+            'supervisor_final_rating' => $func['supervisor_a'] ?? '',  // The average of Q, E, T supervisor ratings
+            'remarks' => $func['remarks'] ?? ''
+        ];
+    }
+}
+
+/**
+ * PHP Calculation Implementation (Representation of the algorithm logic)
+ * This function calculates final IPCR rating based on supervisor's ratings
+ */
+function calculateIPCRFinalRating($strategic_functions, $core_functions) {
+    // Calculate average rating for strategic functions based on supervisor ratings
+    $strategic_total = 0;
+    $strategic_count = count($strategic_functions);
+    
+    foreach ($strategic_functions as $function) {
+        $strategic_total += floatval($function['supervisor_final_rating']);
+    }
+    
+    $strategic_average = ($strategic_count > 0) ? $strategic_total / $strategic_count : 0;
+    
+    // Calculate average rating for core functions based on supervisor ratings
+    $core_total = 0;
+    $core_count = count($core_functions);
+    
+    foreach ($core_functions as $function) {
+        $core_total += floatval($function['supervisor_final_rating']);
+    }
+    
+    $core_average = ($core_count > 0) ? $core_total / $core_count : 0;
+    
+    // Apply weights: 45% for strategic, 55% for core
+    $weighted_strategic = $strategic_average * 0.45;
+    $weighted_core = $core_average * 0.55;
+    
+    // Final IPCR rating
+    $final_rating = $weighted_strategic + $weighted_core;
+    
+    return number_format($final_rating, 2);
+}
+
+/**
+ * This function can also be used to calculate the employee's self-assessed rating
+ * Just replace supervisor_final_rating with final_rating in the function above
+ */
+function calculateIPCRSelfRating($strategic_functions, $core_functions) {
+    // Calculate average rating for strategic functions based on self ratings
+    $strategic_total = 0;
+    $strategic_count = count($strategic_functions);
+    
+    foreach ($strategic_functions as $function) {
+        $strategic_total += floatval($function['final_rating']);
+    }
+    
+    $strategic_average = ($strategic_count > 0) ? $strategic_total / $strategic_count : 0;
+    
+    // Calculate average rating for core functions based on self ratings
+    $core_total = 0;
+    $core_count = count($core_functions);
+    
+    foreach ($core_functions as $function) {
+        $core_total += floatval($function['final_rating']);
+    }
+    
+    $core_average = ($core_count > 0) ? $core_total / $core_count : 0;
+    
+    // Apply weights: 45% for strategic, 55% for core
+    $weighted_strategic = $strategic_average * 0.45;
+    $weighted_core = $core_average * 0.55;
+    
+    // Final IPCR self rating
+    $final_rating = $weighted_strategic + $weighted_core;
+    
+    return number_format($final_rating, 2);
+}
+
+/**
+ * Rating Scale Description:
+ * 5 - Outstanding: Performance represents an extraordinary level of achievement and commitment
+ * 4 - Very Satisfactory: Performance exceeds expectations
+ * 3 - Satisfactory: Performance meets expectations in all areas
+ * 2 - Unsatisfactory: Performance fails to meet expectations in one or more areas
+ * 1 - Poor: Performance is consistently below expectations
+ *
+ * IPCR Final Rating Interpretation:
+ * 4.50 - 5.00: Outstanding
+ * 3.50 - 4.49: Very Satisfactory
+ * 2.50 - 3.49: Satisfactory
+ * 1.50 - 2.49: Unsatisfactory
+ * 1.00 - 1.49: Poor
+ */
+
+// This is how a PHP implementation would work for calculating final ratings
+function getIPCRInterpretation($final_rating) {
+    $final_rating = floatval($final_rating);
+    
+    if ($final_rating >= 4.50) return "Outstanding";
+    if ($final_rating >= 3.50) return "Very Satisfactory";
+    if ($final_rating >= 2.50) return "Satisfactory";
+    if ($final_rating >= 1.50) return "Unsatisfactory";
+    return "Poor";
+} 
