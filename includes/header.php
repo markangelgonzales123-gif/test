@@ -4,6 +4,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Database connection (centralized)
+require_once 'db_connect.php';
+
 // Check if user is accessing a protected page without being logged in
 $public_pages = ['index.php', 'register.php', 'forgot_password.php', 'reset_password.php'];
 $current_page = basename($_SERVER['PHP_SELF']);

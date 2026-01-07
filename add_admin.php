@@ -1,39 +1,29 @@
 <?php
-// Database connection parameters
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-// Create database connection
-$conn = new mysqli($host, $username, $password, $database);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Admin user details
 $name = "New Admin";
 $email = "admin@cca.edu.ph";
-$password = "admin123"; // Non-hashed password for testing
+$password = "admin123"; // Plain text password
 $role = "admin";
 $department_id = 1;
 
-// Insert admin user with non-hashed password
+// Hash the password
+$hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+// Insert admin user with hashed password
 $sql = "INSERT INTO users (name, email, password, role, department_id) 
         VALUES (?, ?, ?, ?, ?)";
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("ssssi", $name, $email, $password, $role, $department_id);
+$stmt->bind_param("ssssi", $name, $email, $hashed_password, $role, $department_id);
 
 if ($stmt->execute()) {
     echo "New admin user created successfully:<br>";
     echo "Email: " . $email . "<br>";
-    echo "Password: " . $password . "<br>";
+    echo "Password: " . $password . " (Hashed: " . $hashed_password . ")<br>";
 } else {
     echo "Error: " . $stmt->error;
 }
 
-$conn->close();
-?> 
+?>

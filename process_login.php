@@ -1,19 +1,7 @@
 <?php
 session_start();
 
-// Database connection parameters
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db"; // You may need to change this to your database name
-
-// Create database connection
-$conn = new mysqli($host, $username, $password, $database);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Process login form data
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -24,6 +12,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Validate input
     if (empty($email) || empty($password)) {
         $_SESSION["error"] = "Email and password are required";
+        header("Location: index.php");
+        exit();
+    }
+    
+    // Validate email domain
+    if (!str_ends_with($email, '@cca.edu.ph')) {
+        $_SESSION["error"] = "Only emails from @cca.edu.ph are allowed.";
         header("Location: index.php");
         exit();
     }
@@ -102,6 +97,3 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     header("Location: index.php");
     exit();
 }
-
-$conn->close();
-?> 

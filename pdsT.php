@@ -18,16 +18,7 @@ if (!isset($_SESSION['user_role']) || ($_SESSION['user_role'] !== 'regular_emplo
 }
 
 // Database connection details
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 $user_id = $_SESSION['user_id'];
 $pds_data_json = 'null'; // Stores the JSON data fetched from DB
@@ -104,7 +95,6 @@ if ($result->num_rows > 0) {
     $pds_data_json = $record['pds_data'];
 }
 
-$conn->close();
 ?>
 
 <div class="container-fluid py-4">

@@ -17,16 +17,7 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $record_id = intval($_GET['id']);
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Check if the record exists and is a draft or pending
 $check_query = "SELECT * FROM records WHERE id = ? AND (status = 'Draft' OR status = 'Pending')";
@@ -116,9 +107,6 @@ try {
     $conn->rollback();
     $_SESSION['error_message'] = "Error deleting record: " . $e->getMessage();
 }
-
-// Close the database connection
-$conn->close();
 
 // Redirect back to records page
 header("Location: records.php");

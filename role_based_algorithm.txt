@@ -110,12 +110,12 @@ function checkEditRecordPermission($record, $user_id, $user_role, $user_departme
     $can_edit = false;
     
     // Record owner can edit their own record if it's a draft
-    if ($record['user_id'] == $user_id && $record['status'] == 'Draft') {
+    if ($record['user_id'] == $user_id && $record['document_status'] == 'Draft') {
         $can_edit = true;
     }
     // Department head can edit records from their department if they're pending or draft
     else if ($user_role == 'department_head' && $user_department_id == $record['department_id']) {
-        $can_edit = ($record['status'] == 'Pending' || $record['status'] == 'Draft');
+        $can_edit = ($record['document_status'] == 'Pending' || $record['document_status'] == 'Draft');
     }
     // Admin can edit all records
     else if ($user_role == 'admin') {
@@ -134,12 +134,12 @@ function checkEditRecordPermission($record, $user_id, $user_role, $user_departme
 $can_edit = false;
 
 // Record owner can edit their own record if it's a draft
-if ($record['user_id'] == $user_id && $record['status'] == 'Draft') {
+if ($record['user_id'] == $user_id && $record['document_status'] == 'Draft') {
     $can_edit = true;
 }
 // Department head can edit records from their department if they're pending or draft
 else if ($user_role == 'department_head' && $user_department_id == $record['department_id']) {
-    $can_edit = ($record['status'] == 'Pending' || $record['status'] == 'Draft');
+    $can_edit = ($record['document_status'] == 'Pending' || $record['document_status'] == 'Draft');
 } 
 // Admin can edit all records
 else if ($user_role == 'admin') {

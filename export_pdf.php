@@ -24,16 +24,7 @@ if (!in_array($record_type, ['IDP', 'IPCR'])) {
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get record data
 $query = "SELECT r.*, u.name as user_name, d.name as department_name 
@@ -111,9 +102,6 @@ if ($record_type === 'IDP') {
     // Generate IPCR PDF content
     $html = generateIPCRContent($record, $strategic_entries, $core_entries, $support_entries);
 }
-
-// Close database connection
-$conn->close();
 
 // Set headers for PDF download
 header('Content-Type: text/html');
@@ -200,7 +188,7 @@ function generateIDPContent($record, $idp_entries) {
         <div class="info-section">
             <p><strong>Name:</strong> ' . htmlspecialchars($record['user_name']) . '</p>
             <p><strong>Department:</strong> ' . htmlspecialchars($record['department_name']) . '</p>
-            <p><strong>Status:</strong> ' . htmlspecialchars($record['status']) . '</p>
+            <p><strong>Status:</strong> ' . htmlspecialchars($record['document_status']) . '</p>
             <p><strong>Date Submitted:</strong> ' . ($record['date_submitted'] ? date('F d, Y', strtotime($record['date_submitted'])) : 'Not yet submitted') . '</p>
         </div>
         
@@ -354,7 +342,7 @@ function generateIPCRContent($record, $strategic_entries, $core_entries, $suppor
         <div class="info-section">
             <p><strong>Name:</strong> ' . htmlspecialchars($record['user_name']) . '</p>
             <p><strong>Department:</strong> ' . htmlspecialchars($record['department_name']) . '</p>
-            <p><strong>Status:</strong> ' . htmlspecialchars($record['status']) . '</p>
+            <p><strong>Status:</strong> ' . htmlspecialchars($record['document_status']) . '</p>
             <p><strong>Date Submitted:</strong> ' . ($record['date_submitted'] ? date('F d, Y', strtotime($record['date_submitted'])) : 'Not yet submitted') . '</p>
         </div>
         

@@ -15,16 +15,7 @@ if (!isset($_SESSION['user_role']) || ($_SESSION['user_role'] !== 'regular_emplo
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get user information
 $user_id = $_SESSION['user_id'];
@@ -107,8 +98,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_ipcr'])) {
                                 <div class="form-group">
                                     <label for="computation_type">Computation Type</label>
                                     <select class="form-control" id="computation_type" name="computation_type">
-                                        <option value="Type1">Type 1 (Strategic 35%, Core 65%)</option>
-                                        <option value="Type2">Type 2 (Strategic 20%, Core 70%, Support 10%)</option>
+                                        <option value="Type1">Type 1 (Strategic 45%, Core 55%)</option>
+                                        <option value="Type2">Type 2 (Strategic 45%, Core 45%, Support 10%)</option>
                                     </select>
                                 </div>
                             </div>
@@ -432,7 +423,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_ipcr'])) {
             };
 
             const sA = getAvg('strategic'), cA = getAvg('core'), suA = getAvg('support');
-            let final = (type === 'Type1') ? (sA * 0.35 + cA * 0.65) : (sA * 0.20 + cA * 0.70 + suA * 0.10);
+            let final = 0;
+            if (type === 'Type1') {
+                final = (sA * 0.45) + (cA * 0.55); // Corrected: 45% Strategic, 55% Core
+            } else { // Type2
+                final = (sA * 0.45) + (cA * 0.45) + (suA * 0.10); // Corrected: 45% Strategic, 45% Core, 10% Support
+            }
             
             $('#final-rating-display').text(final.toFixed(2));
             let adj = "Poor";
@@ -446,6 +442,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_ipcr'])) {
 </script>
 
 <?php
-$conn->close();
 include_once('includes/footer.php');
 ?>

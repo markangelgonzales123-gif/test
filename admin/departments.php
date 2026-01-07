@@ -13,16 +13,7 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once '../includes/db_connect.php';
 
 // Handle actions (add, edit, delete departments)
 $message = '';
@@ -355,9 +346,6 @@ $departments_result = $stmt->get_result();
 </script>
 
 <?php
-// Close database connection
-$conn->close();
-
 // Include footer
 include_once('../includes/footer.php');
 ?> 

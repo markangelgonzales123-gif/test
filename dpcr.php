@@ -15,16 +15,7 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] != 'department_head'
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get user info
 $user_id = $_SESSION['user_id'];
@@ -73,6 +64,83 @@ function getComputationTypes() {
 
 // Handle form submission (Commitment and Review)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_dpcr'])) {
+
+    // Validate that a Performance Period is selected
+    $period = $_POST['period'] ?? '';
+    if (empty($period)) {
+        $_SESSION['error_message'] = "Please select a Performance Period before submitting.";
+        // Redirect back to the previous form page
+        header("Location: " . $_SERVER['HTTP_REFERER']);
+        exit();
+    }
+
+    // --- START: NEW SERVER-SIDE VALIDATION ---
+    function validateDPCREntries($category, $post_data, &$error_message) {
+        $cat_lower = strtolower($category);
+        $mfo_key = $cat_lower . '_major_output';
+
+        // Check if the primary array key exists. If not, there are no entries to validate.
+        if (!isset($post_data[$mfo_key]) || !is_array($post_data[$mfo_key])) {
+            $error_message = "You must have at least one entry for $category Functions.";
+            return false; // No entries submitted for a required category.
+        }
+
+        $entry_count = count($post_data[$mfo_key]);
+        $has_at_least_one_complete_entry = false;
+
+        for ($i = 0; $i < $entry_count; $i++) {
+            // These are the primary fields for the "Commitment" phase
+            $major_output = trim($post_data[$cat_lower . '_major_output'][$i] ?? '');
+            $indicators = trim($post_data[$cat_lower . '_success_indicators'][$i] ?? '');
+            $accountable = trim($post_data[$cat_lower . '_accountable'][$i] ?? '');
+
+            $commitment_fields = [$major_output, $indicators, $accountable];
+            $filled_commitment_fields_count = count(array_filter($commitment_fields));
+            
+            // A row is considered "active" if any of its commitment fields are filled.
+            if ($filled_commitment_fields_count > 0) {
+                // If it's active but not all fields are filled, it's an error.
+                if ($filled_commitment_fields_count < count($commitment_fields)) {
+                    $error_message = "In $category Functions, row #" . ($i + 1) . " is incomplete. Please fill all commitment fields (Major Final Output, Success Indicators, Accountable Person/Office) or clear the row completely.";
+                    return false;
+                }
+                
+                // If all commitment fields are filled, this counts as a valid entry.
+                if ($filled_commitment_fields_count === count($commitment_fields)) {
+                    $has_at_least_one_complete_entry = true;
+                }
+            }
+        }
+
+        if (!$has_at_least_one_complete_entry) {
+            $error_message = "You must have at least one complete entry for $category Functions. An entry is complete if the 'Major Final Output', 'Success Indicators', and 'Accountable Person/Office' fields are all filled.";
+            return false;
+        }
+
+        return true;
+    }
+
+    $validation_error = '';
+    $computation_type_val = $_POST['computation_type'] ?? 'Type1';
+
+    // Get the correct redirect URL, preserving the record ID if it exists
+    $redirect_url = 'dpcr.php?action=new';
+    if (!empty($_GET['id'])) {
+        $redirect_url = 'dpcr.php?action=edit&id=' . intval($_GET['id']);
+    }
+
+    if (!validateDPCREntries('Strategic', $_POST, $validation_error) || !validateDPCREntries('Core', $_POST, $validation_error)) {
+        $_SESSION['error_message'] = $validation_error;
+        header("Location: " . $redirect_url);
+        exit();
+    }
+    if ($computation_type_val === 'Type2' && !validateDPCREntries('Support', $_POST, $validation_error)) {
+        $_SESSION['error_message'] = $validation_error;
+        header("Location: " . $redirect_url);
+        exit();
+    }
+    // --- END: NEW SERVER-SIDE VALIDATION ---
+    
     
     $period = $_POST['period'] ?? '';
     $status = $_POST['status'] ?? 'Draft';
@@ -384,11 +452,11 @@ function generateEntryHtml($entry, $category, $action) {
             <a href="records.php" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back to Records
             </a>
-            <?php if ($action === 'view' && $record_id > 0): ?>
-                <a href="print_record.php?id=<?php echo $record_id; ?>" class="btn btn-sm btn-primary">
-                    <i class="bi bi-printer"></i> Print DPCR
-                </a>
-            <?php endif; ?>
+            <?php if ($action === 'view' && $record_id > 0 && isset($dpcr_data['status']) && $dpcr_data['status'] === 'Approved'): ?>
+            <a href="print_record.php?id=<?php echo $record_id; ?>" class="btn btn-sm btn-primary">
+                <i class="bi bi-printer"></i> Print DPCR
+            </a>
+        <?php endif; ?>
         </div>
     </div>
     
@@ -679,9 +747,6 @@ $(document).ready(function() {
 </script>
 
 <?php
-// Close database connection
-$conn->close();
-
 // Include footer
 include_once('includes/footer.php');
 

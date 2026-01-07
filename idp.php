@@ -12,16 +12,7 @@ if (!isset($_SESSION['user_role']) || ($_SESSION['user_role'] !== 'regular_emplo
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get user information
 $user_id = $_SESSION['user_id'];
@@ -51,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $main_objectives = $_POST['main_objectives'] ?? [];
     $plan_of_action = $_POST['plan_of_action'] ?? [];
     $target_date = $_POST['target_date'] ?? [];
+    $statuses = $_POST['status'] ?? [];
     
     $new_idp_goals = [];
     $count = count($main_objectives);
@@ -63,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'objective' => $obj,
                 'action_plan' => trim($plan_of_action[$i] ?? ''),
                 'target_date' => trim($target_date[$i] ?? ''),
+                'status' => trim($statuses[$i] ?? 'Not Started'),
             ];
         }
     }
@@ -245,9 +238,10 @@ if (empty($idp_entries)) {
                 <table class="table table-bordered mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th style="width: 40%;">Main Objective/s</th>
-                            <th style="width: 40%;">Plan of Action</th>
-                            <th style="width: 20%;">Target Date</th>
+                            <th style="width: 35%;">Main Objective/s</th>
+                            <th style="width: 35%;">Plan of Action</th>
+                            <th style="width: 15%;">Target Date</th>
+                            <th style="width: 15%;">Status</th>
                         </tr>
                     </thead>
                     <tbody id="idp-entries-body">
@@ -261,6 +255,18 @@ if (empty($idp_entries)) {
                                 </td>
                                 <td>
                                     <input type="text" class="form-control" name="target_date[]" value="<?php echo htmlspecialchars($entry['target_date'] ?? ''); ?>" placeholder="e.g. May 2024">
+                                </td>
+                                <td>
+                                    <select class="form-select" name="status[]">
+                                        <?php 
+                                        $statuses = ['Not Started', 'In Progress', 'Accomplished'];
+                                        $current_status = $entry['status'] ?? 'Not Started';
+                                        foreach ($statuses as $status) {
+                                            $selected = ($status === $current_status) ? 'selected' : '';
+                                            echo "<option value=\"{$status}\" {$selected}>{$status}</option>";
+                                        }
+                                        ?>
+                                    </select>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -281,6 +287,4 @@ if (empty($idp_entries)) {
 </div>
 
 <?php
-// Close database connection
-$conn->close();
 ?>

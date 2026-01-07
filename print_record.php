@@ -62,6 +62,7 @@ if ($row = $dept_head_result->fetch_assoc()) {
 $stmt->close();
 
 $record = $record_result->fetch_assoc();
+$form_type = $record['form_type'];
 
 // Check permission to view this record
 $has_permission = false;
@@ -187,10 +188,6 @@ $conn->close();
             max-width: 80px;
             height: auto;
         }
-        /* REMOVE: .record-info - NO LONGER USED FOR IPCR */
-        /* REMOVE: .record-info table - NO LONGER USED FOR IPCR */
-        /* REMOVE: .record-info td - NO LONGER USED FOR IPCR */
-        /* REMOVE: .record-info .label - NO LONGER USED FOR IPCR */
         
         .section-title {
             background-color: #f0f0f0;
@@ -206,7 +203,7 @@ $conn->close();
         }
         table.data-table th,
         table.data-table td {
-            border: 1px solid #ddd;
+            border: 1px solid #ddd; /* Lighter border for general data tables */
             padding: 8px;
             vertical-align: top;
         }
@@ -347,38 +344,16 @@ $conn->close();
             border: none;
         }
         <?php else: ?>
-        /* --- IPCR / DPCR / IDP SPECIFIC STYLES (Existing) --- */
+        /* --- IDP & DPCR SPECIFIC STYLES --- */
         
-        .main-title {
-            text-align: center;
-            font-size: 24px;
-            margin-bottom: 20px;
-        }
-        
-        .header-info, .section-header {
+        .header-info {
             margin-bottom: 15px;
             border: 1px solid #000;
             padding: 10px;
         }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            font-size: 10pt;
-        }
-
-        th, td {
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: left;
-            vertical-align: top;
-        }
         
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-        }
+        /* Generic table styles were removed to avoid conflicts. */
+        /* Each form (DPCR, IDP, IPCR) should rely on its own classes or inline styles. */
 
         .signatures {
             display: flex;
@@ -429,42 +404,31 @@ $conn->close();
                 display: block !important;
                 position: relative; /* Changed from absolute for better flow */
                 width: 100%;
-                margin: 0.5in; /* Apply page margins here for content */
+                margin: 0; /* Let @page handle margins */
+                padding: 0;
                 box-sizing: border-box;
-            }
-            .print-container.idp-portrait {
-                /* Specific dimensions for A4 portrait layout */
-                /* max-width: 210mm; 
-                min-height: 297mm;
-                width: 210mm; */
             }
             
             /* Ensure the main table and its rows can break across pages */
-            .data-table {
+            .data-table, .dpcr-data-table, .pds-table, .form-table {
                 page-break-inside: auto;
             }
-            .data-table tr {
+            .data-table tr, .dpcr-data-table tr, .pds-table tr, .form-table tr {
                 page-break-inside: avoid; /* Keep rows together */
                 page-break-after: auto;
             }
             
             /* Keep header and footer sections together */
-            .ipcr-header,
-            .ipcr-footer-section {
+            .ipcr-header, .ipcr-footer-section, .dpcr-header-table, .signatures, .footnote {
                 page-break-inside: avoid;
             }
 
             @page {
-                size: <?php echo ($form_type === 'IDP' ? 'letter portrait' : 'letter landscape'); ?> ; 
+                size: <?php echo ($form_type === 'IDP' || $form_type === 'PDS' ? 'letter portrait' : 'letter landscape'); ?> ; 
                 margin: 0.5in;
             }
-            .print-container.idp-portrait {
-                /* Specific dimensions for A4 portrait layout */
-                /* max-width: 210mm; 
-                min-height: 297mm;
-                width: 210mm; */
-            }
-            /* Header Styling */
+            
+            /* Header Styling for IDP */
             .header-info {
                 display: flex;
                 align-items: center;
@@ -488,7 +452,7 @@ $conn->close();
             .header-text h4 { font-size: 12pt; }
             .header-text h3 { font-size: 16pt; margin-top: 5px; }
 
-            /* Employee Details Box */
+            /* Employee Details Box for IDP */
             .employee-details {
                 margin-bottom: 20px;
                 border: 1px solid #000;
@@ -499,7 +463,7 @@ $conn->close();
                 margin-top: 0;
             }
             
-            /* Table Styling */
+            /* Table Styling for IDP form-table */
             .table-bordered {
                 border-collapse: collapse;
                 width: 100%;
@@ -521,7 +485,7 @@ $conn->close();
                 min-height: 50px; /* Ensure minimum row height */
             }
 
-            /* Signature Block */
+            /* Signature Block for IDP */
             .signature-block {
                 display: flex;
                 justify-content: space-around;
@@ -830,148 +794,118 @@ $conn->close();
             $support_functions = $content['support_functions'] ?? [];
         ?>
             
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h3 style="margin-bottom: 5px;">INDIVIDUAL PERFORMANCE COMMITMENT AND REVIEW (IPCR)</h3>
-                <h4 style="margin-top: 0;">SELF RATING FORM</h4>
-            </div>
-            
-            <table style="width: 100%; border: none; margin-bottom: 15px; font-size: 10pt;">
-                <tr>
-                    <td style="border: none; padding: 1px 0; display:flex;">
-                        Name of Employee: <div style="font-weight: bold; padding-left: 2px"><?php echo htmlspecialchars($record['employee_name']); ?></div>
-                    </td>
-                    <td style="border: none; padding: 1px 0;">
-                        **Position:** <?php echo htmlspecialchars($record['position'] ?? 'N/A'); ?>
-                    </td>
-                    <td style="border: none; padding: 1px 0;">
-                        **Office:** <?php echo htmlspecialchars($record['department_name'] ?? 'N/A'); ?>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="border: none; padding: 1px 0;" colspan="3">
-                        **Immediate Supervisor:** <?php echo htmlspecialchars($record['reviewer_name'] ?? '____________________'); ?>
-                    </td>
-                </tr>
-            </table>
+            <div class=WordSection1>
+                <p style='text-align:center; font-size:12pt; font-family: "Arial",sans-serif; font-weight: bold;'>
+                    INDIVIDUAL PERFORMANCE COMMITMENT AND REVIEW (IPCR)
+                </p>
 
-            <table class="data-table" style="table-layout: fixed;">
-                <thead>
+                <table style='width:100%; border-collapse:collapse; font-size: 10pt; font-family: "Arial",sans-serif;'>
                     <tr>
-                        <th width="15%" rowspan="2">Output</th>
-                        <th width="20%" rowspan="2">Success Indicator (Target + Measure)</th>
-                        <th width="25%" rowspan="2">Actual Accomplishments</th>
-                        <th width="20%" colspan="4" style="text-align: center;">Self-Rating</th>
-                        <th width="20%" colspan="4" style="text-align: center;">Supervisor's Rating</th>
-                        <th width="20%" rowspan="2">Remarks</th>
+                        <td style='padding:1px 5px;'>Name of Employee:</td>
+                        <td style='border-bottom:1px solid #000; font-weight:bold;'><?php echo htmlspecialchars($record['employee_name']); ?></td>
+                        <td style='padding:1px 5px;'>Position:</td>
+                        <td style='border-bottom:1px solid #000; font-weight:bold;'><?php echo htmlspecialchars($record['position'] ?? 'N/A'); ?></td>
+                        <td style='padding:1px 5px;'>Office:</td>
+                        <td style='border-bottom:1px solid #000; font-weight:bold;'><?php echo htmlspecialchars($record['department_name'] ?? 'N/A'); ?></td>
                     </tr>
                     <tr>
-                        <th width="5%" style="text-align: center;">Q</th>
-                        <th width="5%" style="text-align: center;">E</th>
-                        <th width="5%" style="text-align: center;">T</th>
-                        <th width="5%" style="text-align: center;">A</th>
-                        <th width="5%" style="text-align: center;">Q</th>
-                        <th width="5%" style="text-align: center;">E</th>
-                        <th width="5%" style="text-align: center;">T</th>
-                        <th width="5%" style="text-align: center;">A</th>
+                        <td style='padding:1px 5px;'>Immediate Supervisor:</td>
+                        <td style='border-bottom:1px solid #000; font-weight:bold;'><?php echo htmlspecialchars($record['reviewer_name'] ?? '____________________'); ?></td>
+                        <td colspan="4"></td>
                     </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    function render_ipcr_entries($entries, $section_title) {
-                        if (empty($entries)) {
-                            echo '<tr><td colspan="11" style="font-style: italic;">No ' . strtolower($section_title) . ' functions defined</td></tr>';
-                            return;
+                </table>
+
+                <br>
+
+                <table class="data-table" style="width:100%; border-collapse:collapse; font-size:9pt; table-layout:fixed;">
+                    <thead>
+                        <tr style="background-color: #f2f2f2; font-weight:bold; text-align:center;">
+                            <td rowspan="2" style="width:18%; border:1px solid #000; padding:4px;">Output</td>
+                            <td rowspan="2" style="width:22%; border:1px solid #000; padding:4px;">Success Indicator (Target + Measure)</td>
+                            <td rowspan="2" style="width:22%; border:1px solid #000; padding:4px;">Actual Accomplishments</td>
+                            <td colspan="4" style="width:14%; border:1px solid #000; padding:4px;">Self-Rating</td>
+                            <td colspan="4" style="width:14%; border:1px solid #000; padding:4px;">Supervisor's Rating</td>
+                            <td rowspan="2" style="width:10%; border:1px solid #000; padding:4px;">Remarks</td>
+                        </tr>
+                        <tr style="background-color: #f2f2f2; font-weight:bold; text-align:center;">
+                            <td style='width:3.5%; border:1px solid #000; padding:4px;'>Q</td>
+                            <td style='width:3.5%; border:1px solid #000; padding:4px;'>E</td>
+                            <td style='width:3.5%; border:1px solid #000; padding:4px;'>T</td>
+                            <td style='width:3.5%; border:1px solid #000; padding:4px;'>A</td>
+                            <td style='width:3.5%; border:1px solid #000; padding:4px;'>Q</td>
+                            <td style='width:3.5%; border:1px solid #000; padding:4px;'>E</td>
+                            <td style='width:3.5%; border:1px solid #000; padding:4px;'>T</td>
+                            <td style='width:3.5%; border:1px solid #000; padding:4px;'>A</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        function render_ipcr_section($entries, $section_title) {
+                            if (empty($entries)) {
+                                echo '<tr><td colspan="13" style="border:1px solid #000; padding:4px; font-style: italic;">No ' . strtolower($section_title) . ' defined.</td></tr>';
+                                return;
+                            }
+                            echo '<tr><td colspan="13" style="border:1px solid #000; padding:4px; font-weight: bold; background-color: #f0f0f0;">' . htmlspecialchars(strtoupper($section_title)) . '</td></tr>';
+                            foreach ($entries as $entry) {
+                                echo '<tr>';
+                                echo '<td style="border:1px solid #000; padding:4px;">' . nl2br(htmlspecialchars($entry['mfo'] ?? '')) . '</td>';
+                                echo '<td style="border:1px solid #000; padding:4px;">' . nl2br(htmlspecialchars($entry['success_indicators'] ?? '')) . '</td>';
+                                echo '<td style="border:1px solid #000; padding:4px;">' . nl2br(htmlspecialchars($entry['accomplishments'] ?? '')) . '</td>';
+                                echo '<td style="border:1px solid #000; padding:4px; text-align: center;">' . htmlspecialchars($entry['q'] ?? '') . '</td>';
+                                echo '<td style="border:1px solid #000; padding:4px; text-align: center;">' . htmlspecialchars($entry['e'] ?? '') . '</td>';
+                                echo '<td style="border:1px solid #000; padding:4px; text-align: center;">' . htmlspecialchars($entry['t'] ?? '') . '</td>';
+                                echo '<td style="border:1px solid #000; padding:4px; text-align: center; font-weight: bold;">' . htmlspecialchars($entry['a'] ?? '') . '</td>';
+                                echo '<td style="border:1px solid #000; padding:4px; text-align: center;">' . htmlspecialchars($entry['supervisor_q'] ?? '') . '</td>';
+                                echo '<td style="border:1px solid #000; padding:4px; text-align: center;">' . htmlspecialchars($entry['supervisor_e'] ?? '') . '</td>';
+                                echo '<td style="border:1px solid #000; padding:4px; text-align: center;">' . htmlspecialchars($entry['supervisor_t'] ?? '') . '</td>';
+                                echo '<td style="border:1px solid #000; padding:4px; text-align: center; font-weight: bold;">' . htmlspecialchars($entry['supervisor_a'] ?? '') . '</td>';
+                                echo '<td style="border:1px solid #000; padding:4px;">' . nl2br(htmlspecialchars($entry['remarks'] ?? '')) . '</td>';
+                                echo '</tr>';
+                            }
                         }
-                        echo '<tr><td colspan="11" style="font-weight: bold; background-color: #f0f0f0;">' . htmlspecialchars($section_title) . '</td></tr>';
-                        foreach ($entries as $entry) {
-                            echo '<tr>';
-                            echo '<td>' . nl2br(htmlspecialchars($entry['mfo'])) . '</td>';
-                            echo '<td>' . nl2br(htmlspecialchars($entry['success_indicators'])) . '</td>';
-                            echo '<td>' . nl2br(htmlspecialchars($entry['accomplishments'] ?? '')) . '</td>';
-                            echo '<td style="text-align: center;">' . htmlspecialchars($entry['q'] ?? '') . '</td>';
-                            echo '<td style="text-align: center;">' . htmlspecialchars($entry['e'] ?? '') . '</td>';
-                            echo '<td style="text-align: center;">' . htmlspecialchars($entry['t'] ?? '') . '</td>';
-                            echo '<td style="text-align: center; font-weight: bold;">' . htmlspecialchars($entry['a'] ?? '') . '</td>';
-                            echo '<td style="text-align: center;">' . htmlspecialchars($entry['supervisor_q'] ?? '') . '</td>';
-                            echo '<td style="text-align: center;">' . htmlspecialchars($entry['supervisor_e'] ?? '') . '</td>';
-                            echo '<td style="text-align: center;">' . htmlspecialchars($entry['supervisor_t'] ?? '') . '</td>';
-                            echo '<td style="text-align: center; font-weight: bold;">' . htmlspecialchars($entry['supervisor_a'] ?? '') . '</td>';
-                            echo '<td>' . nl2br(htmlspecialchars($entry['remarks'] ?? '')) . '</td>';
-                            echo '</tr>';
-                        }
-                    }
 
-                    render_ipcr_entries($strategic_functions, 'STRATEGIC FUNCTIONS');
-                    render_ipcr_entries($core_functions, 'CORE FUNCTIONS');
-                    render_ipcr_entries($support_functions, 'SUPPORT FUNCTIONS');
-                    ?>
-                    
-                    <tr>
-                        <td colspan="6" style="text-align: right; font-weight: bold; border-left: none; border-bottom: none;">Total Strategic Function</td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['strategic_average'] ?? ''); ?></td>
-                        <td colspan="3" style="border: none;"></td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['supervisor_strategic_average'] ?? ''); ?></td>
-                        <td style="border-right: none;"></td>
-                    </tr>
-                    <tr>
-                        <td colspan="6" style="text-align: right; font-weight: bold; border-left: none; border-bottom: none;">Total Core Function</td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['core_average'] ?? ''); ?></td>
-                        <td colspan="3" style="border: none;"></td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['supervisor_core_average'] ?? ''); ?></td>
-                        <td style="border-right: none;"></td>
-                    </tr>
-                    <tr>
-                        <td colspan="6" style="text-align: right; font-weight: bold; border-left: none; border-bottom: none;">Total Support Function</td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['support_average'] ?? ''); ?></td>
-                        <td colspan="3" style="border: none;"></td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['supervisor_support_average'] ?? ''); ?></td>
-                        <td style="border-right: none;"></td>
-                    </tr>
-                    <tr>
-                        <td colspan="6" style="text-align: right; font-weight: bold;">Final Average Rating</td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['final_rating'] ?? ''); ?></td>
-                        <td colspan="3" style="text-align: right; font-weight: bold;">Final Average Rating</td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['supervisor_final_rating'] ?? ''); ?></td>
-                        <td style="font-weight: bold;"><?php echo htmlspecialchars($content['supervisor_rating_interpretation'] ?? ''); ?></td>
-                    </tr>
-                </tbody>
-            </table>
+                        render_ipcr_section($strategic_functions, 'Strategic Functions');
+                        render_ipcr_section($core_functions, 'Core Functions');
+                        render_ipcr_section($support_functions, 'Support Functions');
+                        ?>
+                        
+                        <!-- Summary Rows -->
+                        <tr>
+                            <td colspan="3" style="border:1px solid #000; padding:4px; text-align: right; font-weight: bold;">Final Average Rating (Self)</td>
+                            <td colspan="4" style="border:1px solid #000; padding:4px; text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['final_rating'] ?? ''); ?></td>
+                            <td colspan="5" style="border:1px solid #000; padding:4px;"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="7" style="border:1px solid #000; padding:4px; text-align: right; font-weight: bold;">Final Average Rating (Supervisor)</td>
+                            <td colspan="4" style="border:1px solid #000; padding:4px; text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['supervisor_final_rating'] ?? ''); ?></td>
+                            <td style="border:1px solid #000; padding:4px; font-weight: bold;"><?php echo htmlspecialchars($content['supervisor_rating_interpretation'] ?? ''); ?></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div style="border: 1px solid #000; padding: 5px; margin-top: 20px; margin-bottom: 20px;">
+                    <div style="font-weight: bold; font-family: Arial, sans-serif;">Comments and Recommendations for Development Purposes</div>
+                    <div style="min-height: 50px; font-family: Arial, sans-serif;"><?php echo nl2br(htmlspecialchars($record['feedback'] ?? '')); ?></div>
+                </div>
 
-            <div style="border: 1px solid #000; padding: 5px; margin-bottom: 20px; ">
-                <div style="font-weight: bold;">Comments and Recommendations for Development Purposes</div>
-                <?php echo nl2br(htmlspecialchars($record['feedback'] ?? '')); ?>
+                <table style="width: 100%; border: none; margin-top: 30px; font-size: 10pt; font-family: Arial, sans-serif;">
+                    <tr>
+                        <td style="width: 33%; border: none; padding: 10px 0; vertical-align: bottom; text-align: center;">
+                            <div style="border-bottom: 1px solid #000; width: 80%; margin: 40px auto 0;"><?php echo htmlspecialchars($record['employee_name']); ?></div>
+                            <div style="margin-top: 5px;">Ratee</div>
+                        </td>
+                        <td style="width: 33%; border: none; padding: 10px 0; vertical-align: bottom; text-align: center;">
+                            <div style="border-bottom: 1px solid #000; width: 80%; margin: 40px auto 0;"><?php echo htmlspecialchars($record['reviewer_name'] ?? ''); ?></div>
+                            <div style="margin-top: 5px;">Rater</div>
+                        </td>
+                         <td style="width: 33%; border: none; padding: 10px 0; vertical-align: bottom; text-align: center;">
+                            <div style="border-bottom: 1px solid #000; width: 80%; margin: 40px auto 0;"><?php echo htmlspecialchars($dept_head_name ?? ''); ?></div>
+                            <div style="margin-top: 5px;">Head of Office</div>
+                        </td>
+                    </tr>
+                </table>
+                <small style="font-family: Arial, sans-serif;">Legends: Q - QUANTITY, E - EFFICIENCY, T - TIMELINESS, A - AVERAGE</small>
             </div>
-            
-            <table style="width: 100%; border: none; margin-top: 50px; font-size: 10pt;">
-                <tr>
-                    <td style="width: 50%; border: none; padding: 10px 0;">
-                        I hereby certify that I agree with the ratings of my immediate supervisor.
-                        <div style="margin-top: 30px; text-align: center; border-bottom: 1px solid #000; width: 80%; margin-left: 10%;">
-                            <?php echo htmlspecialchars($record['employee_name']); ?>
-                        </div>
-                        <div style="text-align: center; width: 80%; margin-left: 10%;">Employee</div>
-                    </td>
-                    <td style="width: 50%; border: none; padding: 10px 0;">
-                        Assessed by:
-                        <div style="margin-top: 30px; text-align: center; border-bottom: 1px solid #000; width: 80%; margin-left: 10%;">
-                            <?php echo htmlspecialchars($record['reviewer_name'] ?? '____________________'); ?>
-                        </div>
-                        <div style="text-align: center; width: 80%; margin-left: 10%;">Supervisor</div>
-                    </td>
-                </tr>
-            </table>
-            
-            <table style="width: 100%; border: none; margin-top: 20px; font-size: 9pt;">
-                <tr>
-                    <td style="width: 50%; border: none;">
-                        **Legend** *1 - Quantity* &nbsp;&nbsp;&nbsp; *2 - Efficiency* &nbsp;&nbsp;&nbsp; *3 - Timeliness* &nbsp;&nbsp;&nbsp; *4 - Average*
-                    </td>
-                    <td style="width: 50%; border: none; text-align: right; font-weight: bold;">
-                        Date: <?php echo date('F d, Y'); ?>
-                    </td>
-                </tr>
-            </table>
-
         <?php endif; ?>
         
         <!-- IDP Form Content -->
@@ -1008,22 +942,32 @@ $conn->close();
             <table class="table table-bordered table-sm form-table">
                 <thead>
                     <tr>
-                        <th style="width: 25%;">Main Objective/s</th>
-                        <th style="width: 30%;">Plan of Action</th>
+                        <th style="width: 30%;">Main Objective/s</th>
+                        <th style="width: 35%;">Plan of Action</th>
                         <th style="width: 15%;">Target Date</th>
+                        <th style="width: 20%;">Status</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (empty($idp_goals)): ?>
+                    <?php
+                    // Re-fetch idp_goals inside this block for clarity and correctness
+                    $idp_content = json_decode($record['content'], true);
+                    $idp_goals = $idp_content['idp_goals'] ?? [];
+                    
+                    if (empty($idp_goals)): 
+                    ?>
                         <tr>
-                            <td colspan="5" style="text-align: center;">No Individual Development Plan entries found.</td>
+                            <td colspan="4" style="text-align: center;">No Individual Development Plan entries found.</td>
                         </tr>
                     <?php else: ?>
+                        <?php foreach ($idp_goals as $goal): ?>
                         <tr>
-                            <td><?php echo nl2br(htmlspecialchars($objective_entry ?? '')); ?></td>
-                            <td><?php echo nl2br(htmlspecialchars($action_plan_entry ?? '')); ?></td>
-                            <td><?php echo nl2br(htmlspecialchars($target_date_entry ?? '')); ?></td>
+                            <td><?php echo nl2br(htmlspecialchars($goal['objective'] ?? '')); ?></td>
+                            <td><?php echo nl2br(htmlspecialchars($goal['action_plan'] ?? '')); ?></td>
+                            <td><?php echo nl2br(htmlspecialchars($goal['target_date'] ?? '')); ?></td>
+                            <td><?php echo nl2br(htmlspecialchars($goal['status'] ?? 'Not Started')); ?></td>
                         </tr>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>

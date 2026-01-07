@@ -20,16 +20,7 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $record_id = intval($_GET['id']);
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get user info
 $user_id = $_SESSION['user_id'];
@@ -305,9 +296,11 @@ unset($_SESSION['error_message']);
             <a href="records.php" class="btn btn-sm btn-outline-secondary me-2">
                 <i class="bi bi-arrow-left"></i> Back to Records
             </a>
+            <?php if ($record['document_status'] === 'Approved'): ?>
             <a href="print_record.php?id=<?php echo $record_id; ?>" class="btn btn-sm btn-primary">
                 <i class="bi bi-printer"></i> Print
             </a>
+            <?php endif; ?>
         </div>
     </div>
     
@@ -348,7 +341,7 @@ unset($_SESSION['error_message']);
                     <div>
                         <?php 
                         $status_class = "";
-                        switch ($record['status']) {
+                        switch ($record['document_status']) {
                             case 'Draft':
                                 $status_class = "secondary";
                                 break;
@@ -364,7 +357,7 @@ unset($_SESSION['error_message']);
                         }
                         ?>
                         <span class="badge bg-<?php echo $status_class; ?>">
-                            <?php echo $record['status']; ?>
+                            <?php echo $record['document_status']; ?>
                         </span>
                     </div>
                 </div>
@@ -398,13 +391,13 @@ unset($_SESSION['error_message']);
     </div>
             
     <!-- Review Status and Feedback Section -->
-    <?php if($record['status'] !== 'Draft'): ?>
+    <?php if($record['document_status'] !== 'Draft'): ?>
     <div class="card mb-4">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Review Status</h5>
             <?php
                 $status_badge_class = '';
-                switch($record['status']) {
+                switch($record['document_status']) {
                     case 'Pending':
                         $status_badge_class = 'warning';
                         break;
@@ -416,15 +409,15 @@ unset($_SESSION['error_message']);
                         break;
                 }
             ?>
-            <span class="badge bg-<?php echo $status_badge_class; ?> fs-6"><?php echo $record['status']; ?></span>
+            <span class="badge bg-<?php echo $status_badge_class; ?> fs-6"><?php echo $record['document_status']; ?></span>
         </div>
         <div class="card-body">
-            <?php if($record['status'] === 'Pending'): ?>
+            <?php if($record['document_status'] === 'Pending'): ?>
                 <div class="alert alert-warning">
                     <i class="bi bi-hourglass-split me-2"></i>
                     <span>This form is currently pending review by your department head.</span>
                 </div>
-            <?php elseif($record['status'] === 'Approved' || $record['status'] === 'Rejected'): ?>
+            <?php elseif($record['document_status'] === 'Approved' || $record['document_status'] === 'Rejected'): ?>
                 <div class="d-flex mb-3">
                     <div class="me-3">
                         <i class="bi bi-person-circle fs-1 text-muted"></i>
@@ -478,7 +471,7 @@ unset($_SESSION['error_message']);
                 <?php endif; ?>
             <?php endif; ?>
             
-            <?php if($record['status'] === 'Rejected'): ?>
+            <?php if($record['document_status'] === 'Rejected'): ?>
                 <div class="alert alert-info mt-3">
                     <i class="bi bi-info-circle me-2"></i>
                     <span>Please review the feedback above and consider submitting a revised version.</span>
@@ -1020,7 +1013,7 @@ unset($_SESSION['error_message']);
                 <?php endif; ?>
                 
     <!-- Review Form for Approvers -->
-    <?php if ($can_review && $record['status'] === 'Pending' && $record['form_type'] === 'IPCR'): ?>
+    <?php if ($can_review && $record['document_status'] === 'Pending' && $record['form_type'] === 'IPCR'): ?>
     <div class="card mb-4">
         <div class="card-header bg-white">
             <h5 class="mb-0">Supervisor Rating</h5>
@@ -1323,7 +1316,7 @@ unset($_SESSION['error_message']);
     <?php endif; ?>
     
     <!-- Regular Review Form for Approvers -->
-    <?php if ($can_review && $record['status'] === 'Pending' && $record['form_type'] !== 'IPCR'): ?>
+    <?php if ($can_review && $record['document_status'] === 'Pending' && $record['form_type'] !== 'IPCR'): ?>
     <div class="card mb-4">
         <div class="card-header bg-white">
             <h5 class="mb-0">Review Record</h5>
@@ -1350,9 +1343,6 @@ unset($_SESSION['error_message']);
 </div>
 
 <?php
-// Close database connection
-$conn->close();
-
 // Include footer
 include_once('includes/footer.php');
 ?> 

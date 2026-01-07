@@ -599,7 +599,7 @@ $conn->close();
                 </tr>
                 <tr>
                     <td class="label">Status:</td>
-                    <td><?php echo $record['status']; ?></td>
+                    <td><?php echo $record['document_status']; ?></td>
                 </tr>
                 <?php if ($record['date_submitted']): ?>
                 <tr>

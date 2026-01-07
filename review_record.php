@@ -27,16 +27,7 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 $record_id = intval($_GET['id']);
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get user information
 $user_id = $_SESSION['user_id'];
@@ -75,7 +66,7 @@ if (!$can_review) {
 }
 
 // Check if record is pending for review
-if ($record['status'] !== 'Pending') {
+if ($record['document_status'] !== 'Pending') {
     $_SESSION['error_message'] = "This record is not pending for review";
     header("Location: view_record.php?id=" . $record_id);
     exit();
@@ -151,10 +142,15 @@ $error_message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['status'])) {
         $review_status = $_POST['status'];
-        $feedback = $_POST['feedback'] ?? '';
+        $feedback = trim($_POST['feedback'] ?? ''); // Trim to correctly check for empty feedback
         $c_remarks = $_POST['remarks'] ?? '';
-        
-        if ($review_status === 'Approved') {
+
+        // If "Approved" is clicked but feedback is given, treat as "Rejected" to allow user edits
+        if ($review_status === 'Approved' && !empty($feedback)) {
+            // This is the "Approve with comments" case, so we use the reject workflow to send it back.
+            $result = rejectForm($conn, $record_id, $user_id, $feedback, $c_remarks);
+
+        } else if ($review_status === 'Approved') { // This is a final, non-editable approval
             // Process ratings for IPCR form
             if ($record['form_type'] === 'IPCR') {
                 // Process strategic functions
@@ -251,8 +247,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $support_average = $support_count > 0 ? $support_total / $support_count : 0;
                 $content['supervisor_support_average'] = number_format($support_average, 2);
                 
-                // Calculate weighted final rating
-                $weighted_rating = ($strategic_average * 0.45) + ($core_average * 0.45) + ($support_average * 0.10);
+                // Get the computation type from the original submission
+                $computation_type = $content['computation_type'] ?? 'Type1';
+
+                // Calculate weighted final rating based on the record's computation type
+                $weighted_rating = 0;
+                if ($computation_type === 'Type1') {
+                    // Type1: Strategic (45%) and Core (55%)
+                    $weighted_rating = ($strategic_average * 0.45) + ($core_average * 0.55);
+                } else { // Type2
+                    // Type2: Strategic (45%), Core (45%), and Support (10%)
+                    $weighted_rating = ($strategic_average * 0.45) + ($core_average * 0.45) + ($support_average * 0.10);
+                }
                 $content['supervisor_final_rating'] = number_format($weighted_rating, 2);
                 
                 // Determine rating interpretation
@@ -273,7 +279,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Use the approveForm function from form_workflow.php
             $result = approveForm($conn, $record_id, $user_id, $content, $feedback, $c_remarks);
-        } else {
+        
+        } else { // Status was 'Rejected'
             // Use the rejectForm function from form_workflow.php
             $result = rejectForm($conn, $record_id, $user_id, $feedback, $c_remarks);
         }
@@ -445,9 +452,8 @@ if ($record['form_type'] === 'IDP') {
                                     </tr>
                                     <?php endforeach; ?>
                                     
-                                    <!-- Core Functions -->
                                     <tr>
-                                        <td colspan="11" class="bg-light fw-bold">Core Functions (45%)</td>
+                                        <td colspan="11" class="bg-light fw-bold">Core Functions (<?php echo ($content['computation_type'] ?? 'Type1') === 'Type1' ? '55%' : '45%'; ?>)</td>
                                     </tr>
                                     <?php foreach ($core_functions as $index => $function): ?>
                                     <tr class="core-function-row">
@@ -505,7 +511,7 @@ if ($record['form_type'] === 'IDP') {
                                     <?php endforeach; ?>
                                     
                                     <!-- Support Functions -->
-                                    <?php if (!empty($support_functions)): ?>
+                                    <?php if (!empty($support_functions) && ($content['computation_type'] ?? 'Type1') === 'Type2'): ?>
                                     <tr>
                                         <td colspan="11" class="bg-light fw-bold">Support Functions (10%)</td>
                                     </tr>
@@ -577,25 +583,27 @@ if ($record['form_type'] === 'IDP') {
                                 <div class="row">
                                     <div class="col-md-4">
                                         <div class="mb-3">
-                                            <label class="form-label">Strategic Functions Average (45%)</label>
+                                            <label class="form-label">Weighted Strategic Average</label>
                                             <input type="text" class="form-control" name="supervisor_strategic_average" id="supervisor_strategic_average" readonly
                                                   value="<?php echo isset($content['supervisor_strategic_average']) ? htmlspecialchars($content['supervisor_strategic_average']) : ''; ?>">
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="mb-3">
-                                            <label class="form-label">Core Functions Average (45%)</label>
+                                            <label class="form-label">Weighted Core Average</label>
                                             <input type="text" class="form-control" name="supervisor_core_average" id="supervisor_core_average" readonly
                                                   value="<?php echo isset($content['supervisor_core_average']) ? htmlspecialchars($content['supervisor_core_average']) : ''; ?>">
                                         </div>
                                     </div>
+                                    <?php if (($content['computation_type'] ?? 'Type1') === 'Type2'): ?>
                                     <div class="col-md-4">
                                         <div class="mb-3">
-                                            <label class="form-label">Support Functions Average (10%)</label>
+                                            <label class="form-label">Weighted Support Average</label>
                                             <input type="text" class="form-control" name="supervisor_support_average" id="supervisor_support_average" readonly
                                                   value="<?php echo isset($content['supervisor_support_average']) ? htmlspecialchars($content['supervisor_support_average']) : ''; ?>">
                                         </div>
                                     </div>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6">
@@ -752,7 +760,7 @@ if ($record['form_type'] === 'IDP') {
                     <h5 class="mb-0">Submit Review</h5>
                 </div>
                 <div class="card-body">
-                    <?php if ($record['status'] === 'Pending'): ?>
+                    <?php if ($record['document_status'] === 'Pending'): ?>
                         <div class="alert alert-info mb-3">
                             <i class="bi bi-info-circle-fill me-2"></i>
                             <span>Please review the <?php echo $record['form_type']; ?> submission and provide your decision below.</span>
@@ -814,8 +822,8 @@ if ($record['form_type'] === 'IDP') {
                                 <div>
                                     <h6 class="alert-heading mb-1">Review Status: 
                                     <?php
-                                        $status_badge_class = ($record['status'] === 'Approved') ? 'success' : 'danger';
-                                        echo '<span class="badge bg-' . $status_badge_class . '">' . $record['status'] . '</span>'; 
+                                        $status_badge_class = ($record['document_status'] === 'Approved') ? 'success' : 'danger';
+                                        echo '<span class="badge bg-' . $status_badge_class . '">' . $record['document_status'] . '</span>'; 
                                     ?>
                                     </h6>
                                     <p class="mb-0 small">This record has already been reviewed on <?php echo date('F d, Y', strtotime($record['reviewed_at'])); ?>.</p>
@@ -843,6 +851,9 @@ if ($record['form_type'] === 'IDP') {
 </div>
 
 <!-- Add this JavaScript to enhance the form interaction -->
+<script>
+    const computationType = '<?php echo $content['computation_type'] ?? 'Type1'; ?>';
+</script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // For approve/reject buttons
@@ -943,7 +954,6 @@ if ($record['form_type'] === 'IDP') {
             });
             
             const strategicAvg = strategicCount > 0 ? strategicTotal / strategicCount : 0;
-            document.getElementById('supervisor_strategic_average').value = strategicAvg.toFixed(2);
             
             // Core functions
             let coreTotal = 0;
@@ -958,7 +968,6 @@ if ($record['form_type'] === 'IDP') {
             });
             
             const coreAvg = coreCount > 0 ? coreTotal / coreCount : 0;
-            document.getElementById('supervisor_core_average').value = coreAvg.toFixed(2);
             
             // Support functions
             let supportTotal = 0;
@@ -973,10 +982,33 @@ if ($record['form_type'] === 'IDP') {
             });
             
             const supportAvg = supportCount > 0 ? supportTotal / supportCount : 0;
-            document.getElementById('supervisor_support_average').value = supportAvg.toFixed(2);
             
             // Calculate final weighted rating
-            const finalRating = (strategicAvg * 0.45) + (coreAvg * 0.45) + (supportAvg * 0.10);
+            let finalRating = 0;
+            let strategicWeighted = 0;
+            let coreWeighted = 0;
+            let supportWeighted = 0;
+
+            if (computationType === 'Type1') {
+                strategicWeighted = strategicAvg * 0.45;
+                coreWeighted = coreAvg * 0.55;
+                finalRating = strategicWeighted + coreWeighted;
+            } else { // Type2
+                strategicWeighted = strategicAvg * 0.45;
+                coreWeighted = coreAvg * 0.45;
+                supportWeighted = supportAvg * 0.10;
+                finalRating = strategicWeighted + coreWeighted + supportWeighted;
+            }
+
+            // Update the input fields with the WEIGHTED values
+            document.getElementById('supervisor_strategic_average').value = strategicWeighted.toFixed(2);
+            document.getElementById('supervisor_core_average').value = coreWeighted.toFixed(2);
+            
+            const supportAverageElement = document.getElementById('supervisor_support_average');
+            if (supportAverageElement) {
+                supportAverageElement.value = supportWeighted.toFixed(2);
+            }
+            
             document.getElementById('supervisor_final_rating').value = finalRating.toFixed(2);
             
             // Set rating interpretation
@@ -1028,9 +1060,6 @@ if ($record['form_type'] === 'IDP') {
 </script>
 
 <?php
-// Close database connection
-$conn->close();
-
 // Include footer
 include_once('includes/footer.php');
 

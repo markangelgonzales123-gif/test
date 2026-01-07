@@ -17,16 +17,7 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $record_id = intval($_GET['id']);
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Check if the record exists and is a draft
 $check_query = "SELECT r.*, u.name as employee_name, u.department_id FROM records r 
@@ -103,9 +94,6 @@ if ($stmt->execute()) {
 } else {
     $_SESSION['error_message'] = "Error submitting draft: " . $conn->error;
 }
-
-// Close the database connection
-$conn->close();
 
 // Redirect back to records page
 header("Location: records.php");

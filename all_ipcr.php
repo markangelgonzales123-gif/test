@@ -12,16 +12,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'president') {
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get filter parameters
 $filter_period = isset($_GET['period']) ? $_GET['period'] : "all";
@@ -75,7 +66,6 @@ $periods_result = $conn->query($periods_query);
 $departments_query = "SELECT id, name FROM departments ORDER BY name";
 $departments_result = $conn->query($departments_query);
 
-$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -212,7 +202,7 @@ $conn->close();
                                         <td>
                                             <?php 
                                             $status_badge = 'secondary';
-                                            switch ($record['status']) {
+                                            switch ($record['document_status']) {
                                                 case 'Draft': $status_badge = 'secondary'; break;
                                                 case 'Approved': $status_badge = 'success'; break;
                                                 case 'Pending': $status_badge = 'warning'; break;
@@ -220,7 +210,7 @@ $conn->close();
                                             }
                                             ?>
                                             <span class="badge bg-<?php echo $status_badge; ?>">
-                                                <?php echo $record['status']; ?>
+                                                <?php echo $record['document_status']; ?>
                                             </span>
                                         </td>
                                         <td>

@@ -21,16 +21,7 @@ $record_id = intval($_GET['id']);
 $user_id = $_SESSION['user_id'];
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Check if the record exists and belongs to the user
 $stmt = $conn->prepare("SELECT * FROM records WHERE id = ? AND user_id = ? AND form_type = 'IDP'");
@@ -46,7 +37,7 @@ if ($result->num_rows === 0) {
 $record = $result->fetch_assoc();
 
 // Check if the record is still in draft status
-if ($record['status'] !== 'Draft') {
+if ($record['document_status'] !== 'Draft') {
     $_SESSION['error_message'] = "You can only edit IDP records that are in draft status.";
     header("Location: idp.php");
     exit();
@@ -414,6 +405,5 @@ $entries_result = $stmt->get_result();
 </div>
 
 <?php
-$conn->close();
 include_once('includes/footer.php');
 ?> 

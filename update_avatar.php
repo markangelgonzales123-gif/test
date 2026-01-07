@@ -52,16 +52,7 @@ $target_file = $upload_dir . $filename;
 // Move uploaded file to destination
 if (move_uploaded_file($_FILES['avatar']['tmp_name'], $target_file)) {
     // Database connection
-    $host = "localhost";
-    $username = "root";
-    $password = "";
-    $database = "epms_db";
-    
-    $conn = new mysqli($host, $username, $password, $database);
-    
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
+    require_once 'includes/db_connect.php';
     
     // Update user's avatar in database
     $user_id = $_SESSION['user_id'];
@@ -91,7 +82,6 @@ if (move_uploaded_file($_FILES['avatar']['tmp_name'], $target_file)) {
         $_SESSION['error_message'] = "Error updating profile picture in database.";
     }
     
-    $conn->close();
 } else {
     $_SESSION['error_message'] = "Error moving uploaded file.";
 }

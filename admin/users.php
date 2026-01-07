@@ -12,16 +12,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once '../includes/db_connect.php';
 
 // Process form submissions for adding/editing users
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -177,7 +168,6 @@ $users_query = "SELECT u.*, d.name as department_name
                ORDER BY u.name";
 $users_result = $conn->query($users_query);
 
-$conn->close();
 ?>
 
 <!DOCTYPE html>

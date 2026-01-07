@@ -188,6 +188,48 @@ function routeFormToDepartmentHead($conn, $record_id, $user_id) {
 
 // Function to submit form and process workflow
 function submitForm($conn, $user_id, $form_type, $period, $content) {
+    
+    // --- START: Semi-Annual Submission Limit Check ---
+    // This check prevents a user from submitting more than one of the same form type per half-year.
+    $current_year = date('Y');
+    $current_month = date('n');
+
+    if ($current_month <= 6) {
+        // First half of the year (January-June)
+        $start_month = 1;
+        $end_month = 6;
+        $period_name = "first";
+    } else {
+        // Second half of the year (July-December)
+        $start_month = 7;
+        $end_month = 12;
+        $period_name = "second";
+    }
+
+    $check_query = "SELECT COUNT(*) as submission_count 
+                    FROM records 
+                    WHERE user_id = ? 
+                      AND form_type = ? 
+                      AND status NOT IN ('Draft', 'Rejected')
+                      AND YEAR(date_submitted) = ?
+                      AND MONTH(date_submitted) BETWEEN ? AND ?";
+                      
+    $stmt_check = $conn->prepare($check_query);
+    $stmt_check->bind_param("isiii", $user_id, $form_type, $current_year, $start_month, $end_month);
+    $stmt_check->execute();
+    $result = $stmt_check->get_result();
+    $row = $result->fetch_assoc();
+    $submission_count = (int)$row['submission_count'];
+    $stmt_check->close();
+
+    if ($submission_count > 0) {
+        return [
+            'success' => false,
+            'message' => "You have already submitted a {$form_type} for the {$period_name} half of {$current_year}. You are limited to one submission per semi-annual period."
+        ];
+    }
+    // --- END: Semi-Annual Submission Limit Check ---
+
     try {
         // Decode content if it's a JSON string
         if (is_string($content)) {

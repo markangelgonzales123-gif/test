@@ -19,16 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['record_id'])) {
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get record ID and user info
 $record_id = intval($_POST['record_id']);
@@ -182,7 +173,4 @@ try {
     
 
 }
-
-// Close database connection
-$conn->close();
-?> 
+ 

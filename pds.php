@@ -12,16 +12,7 @@ if (!isset($_SESSION['user_role']) || ($_SESSION['user_role'] !== 'regular_emplo
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get user information
 $user_id = $_SESSION['user_id'];
@@ -1014,9 +1005,6 @@ $department_name = ($dept_result->num_rows > 0) ? $dept_result->fetch_assoc()['n
 </script>
 
 <?php
-// Close database connection
-$conn->close();
-
 // Include footer
 include_once('includes/footer.php');
 ?> 

@@ -24,19 +24,24 @@ function getRatingInterpretation(averageScore) {
 }
 
 // Calculate final weighted rating based on category weights
-function calculateFinalRating(strategicAverage, coreAverage, supportAverage = null, computationType = 'Type1') {
-    let finalRating;
-    
-    // Type1: Strategic (45%) and Core (55%)
+function calculateFinalRating(strategicAverage, coreAverage, supportAverage = 0, computationType = 'Type1') {
+    // Ensure all inputs are valid numbers, defaulting to 0 if not.
+    const strat = parseFloat(strategicAverage) || 0;
+    const core = parseFloat(coreAverage) || 0;
+    const support = parseFloat(supportAverage) || 0;
+
+    let finalRating = 0;
+
     if (computationType === 'Type1') {
-        finalRating = (strategicAverage * 0.45) + (coreAverage * 0.55);
-    } 
-    // Type2: Strategic (45%), Core (45%), and Support (10%)
-    else if (computationType === 'Type2' && supportAverage !== null) {
-        finalRating = (strategicAverage * 0.45) + (coreAverage * 0.45) + (supportAverage * 0.10);
+        // Type 1 Calculation: Strategic (45%) + Core (55%)
+        finalRating = (strat * 0.45) + (core * 0.55);
+    } else if (computationType === 'Type2') {
+        // Type 2 Calculation: Strategic (45%) + Core (45%) + Support (10%)
+        finalRating = (strat * 0.45) + (core * 0.45) + (support * 0.10);
     } else {
-        // Default to Type1 if computation type is invalid or support average is missing
-        finalRating = (strategicAverage * 0.45) + (coreAverage * 0.55);
+        // Default/fallback logic, which is the same as Type 1.
+        // This is a safety net in case computationType is invalid.
+        finalRating = (strat * 0.45) + (core * 0.55);
     }
     
     return finalRating.toFixed(2);
@@ -117,21 +122,38 @@ function updateFinalRating() {
         supportAverage = supportCount > 0 ? supportTotal / supportCount : 0;
     }
     
-    // Update category average fields if they exist
+    // NEW LOGIC: Calculate weighted values and the final rating
+    let finalRating = 0;
+    let strategicWeighted = 0;
+    let coreWeighted = 0;
+    let supportWeighted = 0;
+
+    if (computationType === 'Type1') {
+        strategicWeighted = strategicAverage * 0.45;
+        coreWeighted = coreAverage * 0.55;
+        finalRating = strategicWeighted + coreWeighted;
+    } else { // Type2
+        strategicWeighted = strategicAverage * 0.45;
+        coreWeighted = coreAverage * 0.45;
+        supportWeighted = supportAverage * 0.10;
+        finalRating = strategicWeighted + coreWeighted + supportWeighted;
+    }
+
+    // Update the input fields with the WEIGHTED values
     if (document.getElementById('strategic_average')) {
-        document.getElementById('strategic_average').value = strategicAverage.toFixed(2);
+        document.getElementById('strategic_average').value = strategicWeighted.toFixed(2);
     }
     if (document.getElementById('core_average')) {
-        document.getElementById('core_average').value = coreAverage.toFixed(2);
+        document.getElementById('core_average').value = coreWeighted.toFixed(2);
     }
-    if (document.getElementById('support_average')) {
-        document.getElementById('support_average').value = supportAverage.toFixed(2);
+    const supportAverageElement = document.getElementById('support_average');
+    if (supportAverageElement) {
+        supportAverageElement.value = supportWeighted.toFixed(2);
     }
     
-    // Calculate and update final rating
-    const finalRating = calculateFinalRating(strategicAverage, coreAverage, supportAverage, computationType);
+    // Update final rating
     if (document.getElementById('final_rating')) {
-        document.getElementById('final_rating').value = finalRating;
+        document.getElementById('final_rating').value = finalRating.toFixed(2);
     }
     
     // Update rating interpretation
