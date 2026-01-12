@@ -222,6 +222,10 @@ function renderDynamicTable($title, $sectionKey, $pdsData, $columns) {
             padding: 0.5in;
         }
         @media print {
+            @page {
+                size: letter portrait;
+                margin: 0.5in;
+            }
             .print-container {
                 margin: 0;
                 padding: 0;

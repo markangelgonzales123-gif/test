@@ -5,6 +5,14 @@ $page_title = "Staff IPCR - EPMS";
 // Include header
 include_once('includes/header.php');
 
+// Check for success or error messages
+$success_message = isset($_SESSION['success_message']) ? $_SESSION['success_message'] : '';
+$error_message = isset($_SESSION['error_message']) ? $_SESSION['error_message'] : '';
+
+// Clear session messages
+unset($_SESSION['success_message']);
+unset($_SESSION['error_message']);
+
 // Check if user has the right role to access this page
 if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'department_head') {
     header("Location: access_denied.php");
@@ -12,16 +20,7 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'department_hea
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get department ID and name
 $department_id = $_SESSION['user_department_id'];
@@ -62,7 +61,7 @@ mysqli_data_seek($ipcr_result, 0);
 // Check for new submissions in the last 24 hours
 $new_submissions = false;
 foreach ($all_ipcr_records as $record) {
-    if ($record['status'] == 'Pending') {
+    if ($record['document_status'] == 'Distributed') {
         $submitted_time = strtotime($record['date_submitted']);
         $current_time = time();
         if (($current_time - $submitted_time) < 86400) { // Less than 24 hours old
@@ -77,19 +76,21 @@ $status_counts = [
     'Pending' => 0,
     'Approved' => 0,
     'Rejected' => 0,
-    'Draft' => 0
+    'Draft' => 0,
+    'Distributed' => 0,
+    'For Review' => 0
 ];
 
 foreach ($all_ipcr_records as $record) {
-    if (isset($record['status'])) {
-        $status_counts[$record['status']]++;
+    if (isset($record['document_status'])) {
+        $status_counts[$record['document_status']]++;
     }
 }
 
 // Handle filters if submitted
 $filter_employee = isset($_GET['employee']) ? $_GET['employee'] : "all";
 $filter_period = isset($_GET['period']) ? $_GET['period'] : "all";
-$filter_status = isset($_GET['status']) ? $_GET['status'] : "all";
+$filter_status = isset($_GET['document_status']) ? $_GET['document_status'] : "all";
 
 if ($filter_employee != "all" || $filter_period != "all" || $filter_status != "all") {
     // Start building the filtered query with basic conditions
@@ -116,7 +117,7 @@ if ($filter_employee != "all" || $filter_period != "all" || $filter_status != "a
     
     // Add status filter
     if ($filter_status != "all") {
-        $filtered_query .= " AND r.status = ?";
+        $filtered_query .= " AND r.document_status = ?";
         $bind_types .= "s";
         $bind_params[] = $filter_status;
     }
@@ -152,6 +153,19 @@ $periods_result = $stmt->get_result();
             </button>
         </div>
     </div>
+
+    <?php if ($success_message): ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <?php echo $success_message; ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <?php endif; ?>
+    <?php if ($error_message): ?>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <?php echo $error_message; ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <?php endif; ?>
     
     <!-- Notification for new submissions -->
     <?php 
@@ -162,7 +176,7 @@ $periods_result = $stmt->get_result();
             <i class="bi bi-bell-fill me-2 fs-4 pulse-icon"></i>
             <div>
                 <strong>New IPCR submissions!</strong> You have new IPCR forms submitted by staff members that need your review.
-                <a href="staff_ipcr.php?status=Pending" class="alert-link">Click here to review them</a>.
+                <a href="staff_ipcr.php?document_status=Pending" class="alert-link">Click here to review them</a>.
             </div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -190,8 +204,8 @@ $periods_result = $stmt->get_result();
                 <div class="col-md-3 mb-3">
                     <div class="bg-light rounded p-3 text-center">
                         <h6 class="text-muted mb-2">Pending Review</h6>
-                        <h2 class="mb-0"><?php echo $status_counts['Pending']; ?></h2>
-                        <?php if ($status_counts['Pending'] > 0): ?>
+                        <h2 class="mb-0"><?php echo $status_counts['For Review']; ?></h2>
+                        <?php if ($status_counts['For Review'] > 0): ?>
                         <span class="badge bg-danger badge-new">Needs Action</span>
                         <?php endif; ?>
                     </div>
@@ -209,8 +223,8 @@ $periods_result = $stmt->get_result();
     <div class="card">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Staff IPCR Records</h5>
-            <?php if ($status_counts['Pending'] > 0): ?>
-            <span class="badge bg-danger"><?php echo $status_counts['Pending']; ?> Pending Review</span>
+            <?php if ($status_counts['For Review'] > 0): ?>
+            <span class="badge bg-danger"><?php echo $status_counts['For Review']; ?> Pending Review</span>
             <?php endif; ?>
         </div>
         <div class="card-body">
@@ -243,8 +257,8 @@ $periods_result = $stmt->get_result();
                         </select>
                     </div>
                     <div class="col-md-3 mb-2">
-                        <label for="status" class="form-label">Status</label>
-                        <select class="form-select" name="status" id="status">
+                        <label for="document_status" class="form-label">Status</label>
+                        <select class="form-select" name="document_status" id="document_status">
                             <option value="all" <?php echo ($filter_status == "all") ? "selected" : ""; ?>>All Status</option>
                             <option value="Pending" <?php echo ($filter_status == "Pending") ? "selected" : ""; ?>>Pending</option>
                             <option value="Approved" <?php echo ($filter_status == "Approved") ? "selected" : ""; ?>>Approved</option>
@@ -285,7 +299,7 @@ $periods_result = $stmt->get_result();
                                         <?php 
                                         $status_badge = 'secondary';
                                         $is_new = false;
-                                        switch ($ipcr['status']) {
+                                        switch ($ipcr['document_status']) {
                                             case 'Approved':
                                                 $status_badge = 'success';
                                                 break;
@@ -305,7 +319,7 @@ $periods_result = $stmt->get_result();
                                         }
                                         ?>
                                         <span class="badge bg-<?php echo $status_badge; ?>">
-                                            <?php echo $ipcr['status']; ?>
+                                            <?php echo $ipcr['document_status']; ?>
                                             <?php if ($is_new): ?>
                                             <span class="badge bg-danger ms-1 badge-new">New</span>
                                             <?php endif; ?>
@@ -316,7 +330,7 @@ $periods_result = $stmt->get_result();
                                             <a href="view_record.php?id=<?php echo $ipcr['id']; ?>" class="btn btn-sm btn-outline-primary">
                                                 <i class="bi bi-eye"></i> View
                                             </a>
-                                            <?php if ($ipcr['status'] == 'Pending'): ?>
+                                            <?php if ($ipcr['document_status'] == 'Pending'): ?>
                                                 <a href="review_record.php?id=<?php echo $ipcr['id']; ?>" class="btn btn-sm <?php echo $is_new ? 'btn-success pulse-button' : 'btn-outline-success'; ?>">
                                                     <i class="bi bi-check-circle <?php echo $is_new ? 'pulse-icon' : ''; ?>"></i> 
                                                     <?php echo $is_new ? '<strong>Review Now</strong>' : 'Review'; ?>
@@ -325,7 +339,7 @@ $periods_result = $stmt->get_result();
                                             <a href="print_record.php?id=<?php echo $ipcr['id']; ?>" class="btn btn-sm btn-outline-secondary">
                                                 <i class="bi bi-printer"></i> Print
                                             </a>
-                                            <?php if ($ipcr['status'] == 'Draft'): ?>
+                                            <?php if ($ipcr['document_status'] == 'Draft'): ?>
                                                 <button class="btn btn-sm btn-outline-primary" onclick="submitDraftForEmployee(<?php echo $ipcr['id']; ?>)">
                                                     <i class="bi bi-arrow-up-circle"></i> Submit Draft
                                                 </button>
@@ -405,7 +419,7 @@ $periods_result = $stmt->get_result();
                 
                 notification.onclick = function() {
                     window.focus();
-                    window.location.href = 'staff_ipcr.php?status=Pending';
+                    window.location.href = 'staff_ipcr.php?document_status=Pending';
                 };
             } else if (newSubmissions && Notification.permission !== 'denied') {
                 // Request permission
@@ -418,7 +432,7 @@ $periods_result = $stmt->get_result();
                         
                         notification.onclick = function() {
                             window.focus();
-                            window.location.href = 'staff_ipcr.php?status=Pending';
+                            window.location.href = 'staff_ipcr.php?document_status=Pending';
                         };
                     }
                 });
@@ -441,9 +455,6 @@ $periods_result = $stmt->get_result();
 </script>
 
 <?php
-// Close database connection
-$conn->close();
-
 // Include footer
 include_once('includes/footer.php');
 ?>

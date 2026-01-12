@@ -12,16 +12,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get user info
 $user_id = $_SESSION['user_id'];
@@ -99,7 +90,7 @@ if ($filter_type != "all" || $filter_status != "all" || $filter_period != "all")
             $include = false;
         }
         
-        if ($filter_status != "all" && $record['status'] != $filter_status) {
+        if ($filter_status != "all" && $record['document_status'] != $filter_status) {
             $include = false;
         }
         
@@ -317,7 +308,7 @@ unset($_SESSION['error_message']);
                                 <?php 
                                 $status_badge = 'secondary';
                                 $status_icon = '';
-                                switch ($record['status']) {
+                                switch ($record['document_status']) {
                                     case 'Draft':
                                         $status_badge = 'secondary';
                                         $status_icon = 'bi-file-earmark-text';
@@ -338,7 +329,7 @@ unset($_SESSION['error_message']);
                                 
                                 // Check if this is a recent submission
                                 $is_new = false;
-                                if ($record['status'] == 'Pending' && $record['date_submitted']) {
+                                if ($record['document_status'] == 'Pending' && $record['date_submitted']) {
                                     $submitted_time = strtotime($record['date_submitted']);
                                     $current_time = time();
                                     $is_new = ($current_time - $submitted_time) < 86400; // Less than 24 hours old
@@ -346,7 +337,7 @@ unset($_SESSION['error_message']);
                                 ?>
                                 <span class="badge bg-<?php echo $status_badge; ?> d-flex align-items-center d-inline-flex">
                                     <i class="bi <?php echo $status_icon; ?> me-1"></i>
-                                    <?php echo $record['status']; ?>
+                                    <?php echo $record['document_status']; ?>
                                     <?php if ($is_new): ?>
                                         <span class="badge bg-danger ms-1 badge-new">New</span>
                                     <?php endif; ?>
@@ -367,7 +358,7 @@ unset($_SESSION['error_message']);
                                         <i class="bi bi-eye"></i> View
                                     </a>
                                     
-                                    <?php if ($record['status'] == 'Draft' && ($record['user_id'] == $user_id || $user_role == 'admin')): ?>
+                                    <?php if ($record['document_status'] == 'Draft' && ($record['user_id'] == $user_id || $user_role == 'admin')): ?>
                                     <a href="<?php echo strtolower($record['form_type']); ?>.php?action=edit&id=<?php echo $record['id']; ?>" class="btn btn-sm btn-outline-secondary">
                                         <i class="bi bi-pencil"></i> Edit
                                     </a>
@@ -378,7 +369,7 @@ unset($_SESSION['error_message']);
                                     </a>
                                     <?php endif; ?>
                                     
-                                    <?php if ($record['status'] == 'Pending' && 
+                                    <?php if ($record['document_status'] == 'Pending' && 
                                               (($user_role == 'department_head' && $record['form_type'] != 'DPCR') || 
                                                $user_role == 'president')): ?>
                                     <a href="review_record.php?id=<?php echo $record['id']; ?>" class="btn btn-sm <?php echo $is_new ? 'btn-warning pulse-button' : 'btn-outline-warning'; ?>">
@@ -387,11 +378,13 @@ unset($_SESSION['error_message']);
                                     </a>
                                     <?php endif; ?>
                                     
+                                    <?php if ($record['document_status'] == 'Approved'): ?>
                                     <a href="print_record.php?id=<?php echo $record['id']; ?>" class="btn btn-sm btn-outline-secondary">
                                         <i class="bi bi-printer"></i> Print
                                     </a>
+                                    <?php endif; ?>
                                     
-                                    <?php if (($record['status'] == 'Draft' || $record['status'] == 'Pending') && 
+                                    <?php if (($record['document_status'] == 'Draft' || $record['document_status'] == 'Pending') && 
                                                      ($record['user_id'] == $user_id || $user_role == 'admin')): ?>
                                     <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal<?php echo $record['id']; ?>">
                                         <i class="bi bi-trash"></i> Delete
@@ -400,7 +393,7 @@ unset($_SESSION['error_message']);
                                 </div>
                                 
                                 <!-- Delete Confirmation Modal -->
-                                <?php if (($record['status'] == 'Draft' || $record['status'] == 'Pending') && 
+                                <?php if (($record['document_status'] == 'Draft' || $record['document_status'] == 'Pending') && 
                                         ($record['user_id'] == $user_id || $user_role == 'admin')): ?>
                                 <div class="modal fade" id="deleteModal<?php echo $record['id']; ?>" tabindex="-1" aria-labelledby="deleteModalLabel<?php echo $record['id']; ?>" aria-hidden="true">
                                     <div class="modal-dialog">
@@ -487,9 +480,6 @@ unset($_SESSION['error_message']);
 </script>
 
 <?php
-// Close database connection
-$conn->close();
-
 // Include footer
 include_once('includes/footer.php');
 ?> 

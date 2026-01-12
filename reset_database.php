@@ -2,14 +2,8 @@
 // Start session for confirmation messages
 session_start();
 
-// Database connection parameters
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
 // Create database connection
-$conn = new mysqli($host, $username, $password, $database);
+require_once 'includes/db_connect.php';
 
 // Check connection
 if ($conn->connect_error) {
@@ -166,9 +160,6 @@ foreach ($preserved_users as $user) {
 
 // Set success message
 $_SESSION['success'] = "Database has been reset successfully. Academic Affairs structure has been created with all users having password: DeanAko123";
-
-// Close the database connection
-$conn->close();
 
 // Redirect to index page
 header("Location: index.php");

@@ -1,10 +1,10 @@
 <?php
+// Start session
+session_start();
+
 // Set dynamic page title based on user role
 $user_role = $_SESSION['user_role'] ?? '';
 $page_title = ($user_role == 'department_head') ? "Department Head Dashboard - EPMS" : "President Dashboard - EPMS";
-
-// Start session
-session_start();
 
 // Check if user is logged in and has appropriate role
 if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] !== 'president' && $_SESSION['user_role'] !== 'department_head')) {
@@ -13,16 +13,7 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] !== 'president' && $
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 $user_role = $_SESSION['user_role'];
 $user_id = $_SESSION['user_id'];
@@ -66,7 +57,7 @@ if ($user_role === 'president') {
     // Get department performance statistics
     $sql_departments_perf = "SELECT d.name as department_name, 
                         COUNT(r.id) as total_records,
-                        SUM(CASE WHEN r.status = 'Approved' THEN 1 ELSE 0 END) as approved_records
+                        SUM(CASE WHEN r.document_status = 'Approved' THEN 1 ELSE 0 END) as approved_records
                         FROM departments d
                         LEFT JOIN users u ON d.id = u.department_id
                         LEFT JOIN records r ON u.id = r.user_id
@@ -79,7 +70,7 @@ if ($user_role === 'president') {
     }
 
     // Recent records
-    $sql_recent_records = "SELECT r.id, r.form_type, r.period, r.status, r.date_submitted, 
+    $sql_recent_records = "SELECT r.id, r.form_type, r.period, r.document_status, r.date_submitted, 
                         u.name as user_name, d.name as department_name
                         FROM records r 
                         JOIN users u ON r.user_id = u.id 
@@ -122,7 +113,7 @@ else if ($user_role === 'department_head') {
     // Get pending IPCR submissions that need review
     $sql_pending = "SELECT COUNT(*) as total FROM records r 
                     JOIN users u ON r.user_id = u.id 
-                    WHERE u.department_id = ? AND r.status = 'Pending' AND r.form_type = 'IPCR'";
+                    WHERE u.department_id = ? AND r.document_status = 'Pending' AND r.form_type = 'IPCR'";
     $stmt = $conn->prepare($sql_pending);
     $stmt->bind_param("i", $department_id);
     $stmt->execute();
@@ -133,7 +124,7 @@ else if ($user_role === 'department_head') {
     $sql_recent_ipcr = "SELECT r.id, r.period, r.date_submitted, u.name as user_name 
                         FROM records r 
                         JOIN users u ON r.user_id = u.id 
-                        WHERE u.department_id = ? AND r.form_type = 'IPCR' AND r.status = 'Pending' 
+                        WHERE u.department_id = ? AND r.form_type = 'IPCR' AND r.document_status = 'Pending' 
                         ORDER BY r.date_submitted DESC LIMIT 5";
     $stmt = $conn->prepare($sql_recent_ipcr);
     $stmt->bind_param("i", $department_id);
@@ -163,7 +154,6 @@ else if ($user_role === 'department_head') {
     }
 }
 
-$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -389,7 +379,7 @@ $conn->close();
                                         <?php foreach ($recent_records as $record): ?>
                                         <?php
                                             $status_class = 'secondary';
-                                            switch ($record['status']) {
+                                            switch ($record['document_status']) {
                                                 case 'Approved':
                                                     $status_class = 'success';
                                                     break;
@@ -406,7 +396,7 @@ $conn->close();
                                             <td><?php echo htmlspecialchars($record['department_name']); ?></td>
                                             <td><span class="badge bg-primary"><?php echo $record['form_type']; ?></span></td>
                                             <td><?php echo htmlspecialchars($record['period']); ?></td>
-                                            <td><span class="badge bg-<?php echo $status_class; ?>"><?php echo $record['status']; ?></span></td>
+                                            <td><span class="badge bg-<?php echo $status_class; ?>"><?php echo $record['document_status']; ?></span></td>
                                             <td><?php echo date('M d, Y', strtotime($record['date_submitted'])); ?></td>
                                             <td>
                                                 <a href="view_record.php?id=<?php echo $record['id']; ?>" class="btn btn-sm btn-outline-primary">View</a>

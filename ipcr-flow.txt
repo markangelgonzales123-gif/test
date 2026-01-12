@@ -1,0 +1,39 @@
+IPCR Flow Note(steps)::
+
+-Phase 1: DH Initialization (Teal Section)
+-The process begins with the Department Head (DH) setting the stage for the performance cycle.
+
+--Start: The DH initiates the annual or semi-annual review process.
+
+--Create IPCR: The DH drafts the standard IPCR templates and performance targets.
+
+--Distribute IPCR: The DH sends the forms out to the respective employees.
+
+-Phase 2: Employee Initial Action (Green Section)
+-Responsibility shifts to the staff members to document their performance.
+
+--Receive/Fill IPCR: The employee receives the form and fills in their self-ratings and accomplishments.
+
+--Submit IPCR: The employee submits the completed form back to the DH for the first round of review.
+
+-Phase 3: The "Route 1" Review & Revision Loop (Orange Section)
+-This is the critical quality-control phase where the DH and employee collaborate on the final ratings.
+
+--DH Check (Route 1): The DH reviews the submitted IPCR.
+
+--The Decision Point (Diamond): The DH decides if the IPCR is Approved or Requires Revision.
+
+--If NOT Approved: The DH adds ratings and comments explaining what needs to change.
+
+--Employee Revision (Right Box/Loop): The employee receives the IPCR with comments, edits the document, and resubmits it.
+
+--The Re-entry: The edited IPCR goes back into the "DH Check" box for another review. This loop continues until the DH is satisfied.
+
+-Phase 4: Finalization & Locking (Purple Section)
+-Once the DH approves the IPCR, the document moves to the final administrative stage.
+
+--Ready for Printing: The approved IPCR is converted into its final format, ready for physical or digital signatures.
+
+--Rating Separation: The system automatically separates the Self-Ratings and Supervisor Ratings for HR reporting and data analysis.
+
+--Process End (Grey Oval): The document is officially locked and is no longer editable. It is archived as a permanent record.

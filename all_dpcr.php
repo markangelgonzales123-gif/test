@@ -12,16 +12,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'president') {
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get filter parameters
 $filter_period = isset($_GET['period']) ? $_GET['period'] : "all";
@@ -75,7 +66,6 @@ $periods_result = $conn->query($periods_query);
 $departments_query = "SELECT id, name FROM departments ORDER BY name";
 $departments_result = $conn->query($departments_query);
 
-$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -177,10 +167,41 @@ $conn->close();
                             <a href="all_dpcr.php" class="btn btn-outline-secondary ms-2">
                                 <i class="bi bi-x-circle"></i> Clear
                             </a>
+                            <a href="#" id="print-consolidated-btn" class="btn btn-primary ms-2">
+                                <i class="bi bi-printer"></i> Print Consolidated Report
+                            </a>
                         </div>
                     </form>
                 </div>
             </div>
+
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Function to update the print button's href
+                function updatePrintButtonHref() {
+                    const period = document.getElementById('period').value;
+                    const department = document.getElementById('department').value;
+                    const status = document.getElementById('status').value;
+                    
+                    const queryParams = new URLSearchParams({
+                        period: period,
+                        department: department,
+                        status: status
+                    });
+                    
+                    const printBtn = document.getElementById('print-consolidated-btn');
+                    printBtn.href = `print_consolidated_dpcr.php?${queryParams.toString()}`;
+                }
+
+                // Update the href on initial page load
+                updatePrintButtonHref();
+
+                // Update the href whenever a filter changes
+                document.getElementById('period').addEventListener('change', updatePrintButtonHref);
+                document.getElementById('department').addEventListener('change', updatePrintButtonHref);
+                document.getElementById('status').addEventListener('change', updatePrintButtonHref);
+            });
+            </script>
             
             <!-- Records Table -->
             <div class="card">
@@ -202,8 +223,18 @@ $conn->close();
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <?php while ($record = $records_result->fetch_assoc()): ?>
+                                    <?php while ($record = $records_result->fetch_assoc()): 
+                                    
+                                        // Logic to determine if a record is "New"
+                                        $is_new = false;
+                                        if ($record['document_status'] === 'Pending' && !empty($record['date_submitted'])) {
+                                            $submitted_time = strtotime($record['date_submitted']);
+                                            $current_time = time();
+                                            if (($current_time - $submitted_time) < 86400) { // 24 hours in seconds
+                                                $is_new = true;
+                                            }
+                                        }
+                                    ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($record['department_name']); ?></td>
                                         <td><?php echo htmlspecialchars($record['head_name']); ?></td>
@@ -212,7 +243,7 @@ $conn->close();
                                         <td>
                                             <?php 
                                             $status_badge = 'secondary';
-                                            switch ($record['status']) {
+                                            switch ($record['document_status']) {
                                                 case 'Draft': $status_badge = 'secondary'; break;
                                                 case 'Approved': $status_badge = 'success'; break;
                                                 case 'Pending': $status_badge = 'warning'; break;
@@ -220,8 +251,11 @@ $conn->close();
                                             }
                                             ?>
                                             <span class="badge bg-<?php echo $status_badge; ?>">
-                                                <?php echo $record['status']; ?>
+                                                <?php echo $record['document_status']; ?>
                                             </span>
+                                            <?php if ($is_new): ?>
+                                            <span class="badge bg-danger ms-1 badge-new" style="cursor: pointer;" title="Click to dismiss">New</span>
+                                            <?php endif; ?>
                                         </td>
                                         <td>
                                             <?php 
@@ -261,5 +295,16 @@ $conn->close();
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const newBadges = document.querySelectorAll('.badge-new');
+            newBadges.forEach(function(badge) {
+                badge.addEventListener('click', function() {
+                    // Hide the badge when clicked
+                    this.style.display = 'none';
+                });
+            });
+        });
+    </script>
 </body>
 </html> 

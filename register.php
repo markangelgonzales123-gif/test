@@ -8,17 +8,7 @@ if (isset($_SESSION['user_id'])) {
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get departments for dropdown
 $sql = "SELECT * FROM departments ORDER BY name";

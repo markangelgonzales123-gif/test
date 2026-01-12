@@ -17,16 +17,7 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $record_id = intval($_GET['id']);
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get user info
 $user_id = $_SESSION['user_id'];
@@ -34,12 +25,12 @@ $user_role = $_SESSION['user_role'];
 $department_id = $_SESSION['user_department_id'] ?? null;
 
 // Get record data
-$record_query = "SELECT r.*, u.name as employee_name, u.department_id, 
-                 d.name as department_name, rev.name as reviewer_name
+$record_query = "SELECT r.*, u.name as employee_name, u.department_id, u.position as employee_position,
+                 d.name as department_name, dh.name as reviewer_name
                  FROM records r 
                  JOIN users u ON r.user_id = u.id 
                  LEFT JOIN departments d ON u.department_id = d.id
-                 LEFT JOIN users rev ON r.reviewed_by = rev.id
+                 LEFT JOIN users dh ON r.created_by = dh.id
                  WHERE r.id = ?";
 $stmt = $conn->prepare($record_query);
 $stmt->bind_param("i", $record_id);
@@ -50,18 +41,12 @@ if ($record_result->num_rows === 0) {
     die("Record not found!");
 }
 
-$dept_head_name = 'N/A';
-$dept_head_query = "SELECT name FROM users WHERE department_id = ? AND role = 'department_head' LIMIT 1";
-$stmt = $conn->prepare($dept_head_query);
-$stmt->bind_param("i", $record['department_id']);
-$stmt->execute();
-$dept_head_result = $stmt->get_result();
-if ($row = $dept_head_result->fetch_assoc()) {
-    $dept_head_name = $row['name'];
-}
+$record = $record_result->fetch_assoc();
 $stmt->close();
 
-$record = $record_result->fetch_assoc();
+$dept_head_name = $record['reviewer_name'] ?? "N/A";
+
+$form_type = $record['form_type'];
 
 // Check permission to view this record
 $has_permission = false;
@@ -140,22 +125,6 @@ if ($record['form_type'] === 'DPCR') {
 } else if ($record['form_type'] === 'IDP') {
     $content = json_decode($record['content'], true);
     $idp_goals = $content['idp_goals'] ?? [];
-    // ---------------------------------------------------------
-
-
-    // 1. Get the first entry from the array (index 0)
-    // Ensure the array is not empty before trying to access index 0
-    if (!empty($idp_goals)) {
-        $first_goal = $idp_goals[0];
-
-        // 2. Assign the specific fields to variables using array indexing
-        $objective_entry = $first_goal['objective'];
-        $action_plan_entry = $first_goal['action_plan'];
-        $target_date_entry = $first_goal['target_date']; // Renamed from 'target' for accuracy to your JSON
-        
-    } else {
-        echo "No IDP goals found in the content.";
-    }
 }
 $is_dept_head_ipcr_view = ($record['form_type'] === 'IPCR' && $user_role === 'department_head');
 // $title = $record['form_type'] === 'PDS' ? 'PERSONAL DATA SHEET' : htmlspecialchars($record['form_type']) . ' Record';
@@ -187,10 +156,6 @@ $conn->close();
             max-width: 80px;
             height: auto;
         }
-        /* REMOVE: .record-info - NO LONGER USED FOR IPCR */
-        /* REMOVE: .record-info table - NO LONGER USED FOR IPCR */
-        /* REMOVE: .record-info td - NO LONGER USED FOR IPCR */
-        /* REMOVE: .record-info .label - NO LONGER USED FOR IPCR */
         
         .section-title {
             background-color: #f0f0f0;
@@ -206,7 +171,7 @@ $conn->close();
         }
         table.data-table th,
         table.data-table td {
-            border: 1px solid #ddd;
+            border: 1px solid #ddd; /* Lighter border for general data tables */
             padding: 8px;
             vertical-align: top;
         }
@@ -214,6 +179,46 @@ $conn->close();
             background-color: #f5f5f5;
             font-weight: bold;
             text-align: left;
+        }
+        
+        /* IDP Specific Styles */
+        .idp-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .idp-header h1 {
+            margin: 5px 0;
+            font-size: 14px;
+            font-weight: bold;
+            color: #000;
+        }
+        .idp-header h2 {
+            margin: 5px 0;
+            font-size: 14px;
+            font-weight: bold;
+            color: #000;
+        }
+        .idp-section {
+            margin-bottom: 20px;
+        }
+        .idp-info-row {
+            margin: 10px 0;
+        }
+        table.idp-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table.idp-table td {
+            border: 1px solid black;
+            padding: 10px;
+            vertical-align: top;
+        }
+        .idp-signature-section {
+            margin-top: 80px;
+            display: flex;
+            justify-content: space-between;
+            page-break-inside: avoid;
         }
 
         <?php if ($form_type === 'PDS'): ?>
@@ -347,38 +352,16 @@ $conn->close();
             border: none;
         }
         <?php else: ?>
-        /* --- IPCR / DPCR / IDP SPECIFIC STYLES (Existing) --- */
+        /* --- IDP & DPCR SPECIFIC STYLES --- */
         
-        .main-title {
-            text-align: center;
-            font-size: 24px;
-            margin-bottom: 20px;
-        }
-        
-        .header-info, .section-header {
+        .header-info {
             margin-bottom: 15px;
             border: 1px solid #000;
             padding: 10px;
         }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            font-size: 10pt;
-        }
-
-        th, td {
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: left;
-            vertical-align: top;
-        }
         
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-        }
+        /* Generic table styles were removed to avoid conflicts. */
+        /* Each form (DPCR, IDP, IPCR) should rely on its own classes or inline styles. */
 
         .signatures {
             display: flex;
@@ -429,42 +412,31 @@ $conn->close();
                 display: block !important;
                 position: relative; /* Changed from absolute for better flow */
                 width: 100%;
-                margin: 0.5in; /* Apply page margins here for content */
+                margin: 0; /* Let @page handle margins */
+                padding: 0;
                 box-sizing: border-box;
-            }
-            .print-container.idp-portrait {
-                /* Specific dimensions for A4 portrait layout */
-                /* max-width: 210mm; 
-                min-height: 297mm;
-                width: 210mm; */
             }
             
             /* Ensure the main table and its rows can break across pages */
-            .data-table {
+            .data-table, .dpcr-data-table, .pds-table, .form-table {
                 page-break-inside: auto;
             }
-            .data-table tr {
+            .data-table tr, .dpcr-data-table tr, .pds-table tr, .form-table tr {
                 page-break-inside: avoid; /* Keep rows together */
                 page-break-after: auto;
             }
             
             /* Keep header and footer sections together */
-            .ipcr-header,
-            .ipcr-footer-section {
+            .ipcr-header, .ipcr-footer-section, .dpcr-header-table, .signatures, .footnote {
                 page-break-inside: avoid;
             }
 
             @page {
-                size: <?php echo ($form_type === 'IDP' ? 'letter portrait' : 'letter landscape'); ?> ; 
+                size: <?php echo ($form_type === 'IDP' || $form_type === 'PDS' ? 'letter portrait' : ($form_type === 'IPCR' ? 'legal landscape' : 'letter landscape')); ?>; 
                 margin: 0.5in;
             }
-            .print-container.idp-portrait {
-                /* Specific dimensions for A4 portrait layout */
-                /* max-width: 210mm; 
-                min-height: 297mm;
-                width: 210mm; */
-            }
-            /* Header Styling */
+            
+            /* Header Styling for IDP */
             .header-info {
                 display: flex;
                 align-items: center;
@@ -488,7 +460,7 @@ $conn->close();
             .header-text h4 { font-size: 12pt; }
             .header-text h3 { font-size: 16pt; margin-top: 5px; }
 
-            /* Employee Details Box */
+            /* Employee Details Box for IDP */
             .employee-details {
                 margin-bottom: 20px;
                 border: 1px solid #000;
@@ -499,7 +471,7 @@ $conn->close();
                 margin-top: 0;
             }
             
-            /* Table Styling */
+            /* Table Styling for IDP form-table */
             .table-bordered {
                 border-collapse: collapse;
                 width: 100%;
@@ -521,7 +493,7 @@ $conn->close();
                 min-height: 50px; /* Ensure minimum row height */
             }
 
-            /* Signature Block */
+            /* Signature Block for IDP */
             .signature-block {
                 display: flex;
                 justify-content: space-around;
@@ -629,6 +601,28 @@ $conn->close();
         .dpcr-data-table .col-q { width: 5%; text-align: center; } /* Q1, E2, T3, A4 */
         .dpcr-data-table .col-remarks { width: 10%; }
     </style>
+    <?php if ($form_type === 'IPCR'): ?>
+    <style>
+        /* IPCR Specific Styles from Template */
+        p.MsoNormal, li.MsoNormal, div.MsoNormal {
+            margin-top: 0in;
+            margin-right: 0in;
+            margin-bottom: 8.0pt;
+            margin-left: 0in;
+            line-height: 107%;
+            font-size: 11.0pt;
+            font-family: "Calibri", sans-serif;
+        }
+        .ipcr-table {
+            border-collapse: collapse;
+            border: none;
+            width: 100%;
+        }
+        .ipcr-table td {
+            padding: 0in 5.4pt;
+        }
+    </style>
+    <?php endif; ?>
     
 
 </head>
@@ -830,213 +824,356 @@ $conn->close();
             $support_functions = $content['support_functions'] ?? [];
         ?>
             
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h3 style="margin-bottom: 5px;">INDIVIDUAL PERFORMANCE COMMITMENT AND REVIEW (IPCR)</h3>
-                <h4 style="margin-top: 0;">SELF RATING FORM</h4>
-            </div>
-            
-            <table style="width: 100%; border: none; margin-bottom: 15px; font-size: 10pt;">
-                <tr>
-                    <td style="border: none; padding: 1px 0; display:flex;">
-                        Name of Employee: <div style="font-weight: bold; padding-left: 2px"><?php echo htmlspecialchars($record['employee_name']); ?></div>
-                    </td>
-                    <td style="border: none; padding: 1px 0;">
-                        **Position:** <?php echo htmlspecialchars($record['position'] ?? 'N/A'); ?>
-                    </td>
-                    <td style="border: none; padding: 1px 0;">
-                        **Office:** <?php echo htmlspecialchars($record['department_name'] ?? 'N/A'); ?>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="border: none; padding: 1px 0;" colspan="3">
-                        **Immediate Supervisor:** <?php echo htmlspecialchars($record['reviewer_name'] ?? '____________________'); ?>
-                    </td>
-                </tr>
-            </table>
+            <div class="WordSection1">
+                <p class="MsoNormal align-center" style='text-align:center'>
+                    <b>
+                    <span style='font-size:12.0pt;line-height:107%;font-family:"Arial",sans-serif'>INDIVIDUAL PERFORMANCE COMMITMENT AND REVIEW (IPCR) <br> SELF RATING FORM</span>
+                    </b>
+                </p>
 
-            <table class="data-table" style="table-layout: fixed;">
-                <thead>
-                    <tr>
-                        <th width="15%" rowspan="2">Output</th>
-                        <th width="20%" rowspan="2">Success Indicator (Target + Measure)</th>
-                        <th width="25%" rowspan="2">Actual Accomplishments</th>
-                        <th width="20%" colspan="4" style="text-align: center;">Self-Rating</th>
-                        <th width="20%" colspan="4" style="text-align: center;">Supervisor's Rating</th>
-                        <th width="20%" rowspan="2">Remarks</th>
+                <table class="2 border=1 cellspacing=0 cellpadding=0 width=1151" style='border-collapse:collapse;border:none'>
+                    <tr style='height:13.3pt'>
+                    <td width=170 valign=top style='width:127.35pt;border:none;padding:0in 5.4pt 0in 5.4pt; height:13.3pt'>
+                        <p class=MsoNormal style='margin-bottom:0in;line-height:normal'>
+                        <span style='font-family:"Arial",sans-serif'>Name of Employee:</span>
+                        </p>
+                    </td>
+                    <td width=295 valign=top style='width:220.9pt;border:none;border-bottom:solid black 1.0pt; padding:0in 5.4pt 0in 5.4pt;height:13.3pt'>
+                        <p class=MsoNormal style='margin-bottom:0in;line-height:normal'>
+                        <b>
+                            <span style='font-family:"Arial",sans-serif'><?php echo htmlspecialchars($record['employee_name']); ?></span>
+                        </b>
+                        </p>
+                    </td>
+                    <td width=79 valign=top style='width:58.9pt;border:none;padding:0in 5.4pt 0in 5.4pt; height:13.3pt'>
+                        <p class=MsoNormal style='margin-bottom:0in;line-height:normal'>
+                        <span style='font-family:"Arial",sans-serif'>Position:</span>
+                        </p>
+                    </td>
+                    <td width=242 valign=top style='width:181.65pt;border:none;border-bottom: solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:13.3pt'>
+                        <p class=MsoNormal style='margin-bottom:0in;line-height:normal'>
+                        <b>
+                            <span style='font-family:"Arial",sans-serif'><?php echo htmlspecialchars($record['employee_position'] ?? 'N/A'); ?></span>
+                        </b>
+                        </p>
+                    </td>
+                    <td width=59 valign=top style='width:44.15pt;border:none;padding:0in 5.4pt 0in 5.4pt; height:13.3pt'>
+                        <p class=MsoNormal style='margin-bottom:0in;line-height:normal'>
+                        <span style='font-family:"Arial",sans-serif'>Office:</span>
+                        </p>
+                    </td>
+                    <td width=307 valign=top style='width:230.45pt;border:none;border-bottom: solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:13.3pt'>
+                        <p class=MsoNormal style='margin-bottom:0in;line-height:normal'>
+                        <b>
+                            <span style='font-family:"Arial",sans-serif'><?php echo htmlspecialchars(string: $record['department_name'] ?? 'N/A'); ?></span>
+                        </b>
+                        </p>
+                    </td>
                     </tr>
-                    <tr>
-                        <th width="5%" style="text-align: center;">Q</th>
-                        <th width="5%" style="text-align: center;">E</th>
-                        <th width="5%" style="text-align: center;">T</th>
-                        <th width="5%" style="text-align: center;">A</th>
-                        <th width="5%" style="text-align: center;">Q</th>
-                        <th width="5%" style="text-align: center;">E</th>
-                        <th width="5%" style="text-align: center;">T</th>
-                        <th width="5%" style="text-align: center;">A</th>
+                    <tr style='height:12.5pt'>
+                    <td width=170 valign=top style='width:127.35pt;border:none;padding:0in 5.4pt 0in 5.4pt; height:12.5pt'>
+                        <p class=MsoNormal style='margin-bottom:0in;line-height:normal'>
+                        <span style='font-family:"Arial",sans-serif'>Immediate Supervisor:</span>
+                        </p>
+                    </td>
+                    <td width=295 valign=top style='width:220.9pt;border:none;border-bottom:solid black 1.0pt; padding:0in 5.4pt 0in 5.4pt;height:12.5pt'>
+                        <p class=MsoNormal style='margin-bottom:0in;line-height:normal'>
+                        <b>
+                            <span style='font-family:"Arial",sans-serif'><?php echo htmlspecialchars($dept_head_name ?? '____________________'); ?></span>
+                        </b>
+                        </p>
+                    </td>
+                    <td width=79 valign=top style='width:58.9pt;border:none;padding:0in 5.4pt 0in 5.4pt; height:12.5pt'>
+                        <p class=MsoNormal style='margin-bottom:0in;line-height:normal'>
+                        <span style='font-family:"Arial",sans-serif'>&nbsp;</span>
+                        </p>
+                    </td>
+                    <td width=242 valign=top style='width:181.65pt;border:none;padding:0in 5.4pt 0in 5.4pt; height:12.5pt'>
+                        <p class=MsoNormal style='margin-bottom:0in;line-height:normal'>
+                        <span style='font-family:"Arial",sans-serif'>&nbsp;</span>
+                        </p>
+                    </td>
+                    <td width=59 valign=top style='width:44.15pt;border:none;padding:0in 5.4pt 0in 5.4pt; height:12.5pt'>
+                        <p class=MsoNormal style='margin-bottom:0in;line-height:normal'>
+                        <span style='font-family:"Arial",sans-serif'>&nbsp;</span>
+                        </p>
+                    </td>
+                    <td width=307 valign=top style='width:230.45pt;border:none;padding:0in 5.4pt 0in 5.4pt; height:12.5pt'>
+                        <p class=MsoNormal style='margin-bottom:0in;line-height:normal'>
+                        <span style='font-family:"Arial",sans-serif'>&nbsp;</span>
+                        </p>
+                    </td>
                     </tr>
-                </thead>
-                <tbody>
+                </table>
+                <br>
+            
+                <table class="ipcr-table" border="1" cellspacing="0" cellpadding="0" style='margin-left:-.25pt;border-collapse:collapse;border:none'>
+                    <tbody>
+                        <tr style='height:38.6pt'>
+                            <td width=195 valign=top style='width:146.55pt;border:solid black 1.0pt; padding:0in 5.4pt 0in 5.4pt;height:38.6pt'>
+                                <p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><b><span style='font-family:"Arial",sans-serif'>Output</span></b></p>
+                            </td>
+                            <td width=223 valign=top style='width:167.05pt;border:solid black 1.0pt; border-left:none;padding:0in 5.4pt 0in 5.4pt;height:38.6pt'>
+                                <p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><b><span style='font-family:"Arial",sans-serif'>Success Indicator (Target + Measure)</span></b></p>
+                            </td>
+                            <td width=239 valign=top style='width:179.6pt;border:solid black 1.0pt; border-left:none;padding:0in 5.4pt 0in 5.4pt;height:38.6pt'>
+                                <p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><b><span style='font-family:"Arial",sans-serif'>Actual Accomplishments</span></b></p>
+                            </td>
+                            <td width=177 colspan=4 valign=top style='width:132.7pt;border:solid black 1.0pt; border-left:none;padding:0in 5.4pt 0in 5.4pt;height:38.6pt'>
+                                <p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><b><span style='font-family:"Arial",sans-serif'>Self-Rating</span></b></p>
+                            </td>
+                            <td width=173 colspan=4 valign=top style='width:129.85pt;border:solid black 1.0pt; border-left:none;padding:0in 5.4pt 0in 5.4pt;height:38.6pt'>
+                                <p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><b><span style='font-family:"Arial",sans-serif'>Supervisor's Rating</span></b></p>
+                                <p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><b><span style='font-family:"Arial",sans-serif'>&nbsp;</span></b></p>
+                            </td>
+                            <td width=144 valign=top style='width:1.5in;border:solid black 1.0pt; border-left:none;padding:0in 5.4pt 0in 5.4pt;height:38.6pt'>
+                                <p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><b><span style='font-family:"Arial",sans-serif'>Remarks</span></b></p>
+                            </td>
+                        </tr>
+                        <tr style='height:12.85pt'>
+                            <td width=195 valign=top style='width:146.55pt;border:solid black 1.0pt; border-top:none;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'></td>
+                            <td width=223 valign=top style='width:167.05pt;border-top:none;border-left: none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt; padding:0in 5.4pt 0in 5.4pt;height:12.85pt'></td>
+                            <td width=239 valign=top style='width:179.6pt;border-top:none;border-left: none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt; padding:0in 5.4pt 0in 5.4pt;height:12.85pt'></td>
+                            <td width=43 style='width:32.25pt;border-top:none;border-left:none; border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt; height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><span style='font-family:"Arial",sans-serif;color:black'>Q<sup>1</sup></span></p></td>
+                            <td width=43 style='width:32.25pt;border-top:none;border-left:none; border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt; height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><span style='font-family:"Arial",sans-serif;color:black'>E<sup>2</sup></span></p></td>
+                            <td width=43 style='width:32.25pt;border-top:none;border-left:none; border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt; height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><span style='font-family:"Arial",sans-serif;color:black'>T<sup>3</sup></span></p></td>
+                            <td width=48 style='width:35.95pt;border-top:none;border-left:none; border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt; height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><span style='font-family:"Arial",sans-serif;color:black'>A<sup>4</sup></span></p></td>
+                            <td width=43 style='width:32.25pt;border-top:none;border-left:none; border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt; height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><span style='font-family:"Arial",sans-serif;color:black'>Q<sup>1</sup></span></p></td>
+                            <td width=43 style='width:32.25pt;border-top:none;border-left:none; border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt; height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><span style='font-family:"Arial",sans-serif;color:black'>E<sup>2</sup></span></p></td>
+                            <td width=43 style='width:32.25pt;border-top:none;border-left:none; border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt; height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><span style='font-family:"Arial",sans-serif;color:black'>T<sup>3</sup></span></p></td>
+                            <td width=44 style='width:33.1pt;border-top:none;border-left:none;border-bottom: solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt; height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><span style='font-family:"Arial",sans-serif;color:black'>A<sup>4</sup></span></p></td>
+                            <td width=144 valign=top style='width:1.5in;border-top:none;border-left:none; border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt; height:12.85pt'></td>
+                        </tr>
+
                     <?php 
-                    function render_ipcr_entries($entries, $section_title) {
+                    function render_ipcr_rows($entries, $section_title) {
+                        // Section Header Row
+                        echo "<tr style='height:12.85pt'>";
+                        echo "<td width=195 valign=top style='width:146.55pt;border:solid black 1.0pt; border-top:none;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal style='margin-bottom:0in;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif'>" . htmlspecialchars($section_title) . "</span></b></p></td>";
+                        // Empty cells for the rest of the row to maintain border structure
+                        echo "<td width=223 valign=top style='width:167.05pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'></td>";
+                        echo "<td width=239 valign=top style='width:179.6pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'></td>";
+                        for($i=0; $i<8; $i++) { // 8 rating cells
+                             $width = ($i==3 || $i==7) ? 48 : 43; // A column is slightly wider in template
+                             $pt_width = ($i==3 || $i==7) ? '35.95pt' : '32.25pt';
+                             echo "<td width=$width valign=top style='width:$pt_width;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'></td>";
+                        }
+                        echo "<td width=144 valign=top style='width:1.5in;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'></td>";
+                        echo "</tr>";
+
                         if (empty($entries)) {
-                            echo '<tr><td colspan="11" style="font-style: italic;">No ' . strtolower($section_title) . ' functions defined</td></tr>';
+                            // Optional: Render an empty row or message if needed, but template implies structure
                             return;
                         }
-                        echo '<tr><td colspan="11" style="font-weight: bold; background-color: #f0f0f0;">' . htmlspecialchars($section_title) . '</td></tr>';
+                        
                         foreach ($entries as $entry) {
-                            echo '<tr>';
-                            echo '<td>' . nl2br(htmlspecialchars($entry['mfo'])) . '</td>';
-                            echo '<td>' . nl2br(htmlspecialchars($entry['success_indicators'])) . '</td>';
-                            echo '<td>' . nl2br(htmlspecialchars($entry['accomplishments'] ?? '')) . '</td>';
-                            echo '<td style="text-align: center;">' . htmlspecialchars($entry['q'] ?? '') . '</td>';
-                            echo '<td style="text-align: center;">' . htmlspecialchars($entry['e'] ?? '') . '</td>';
-                            echo '<td style="text-align: center;">' . htmlspecialchars($entry['t'] ?? '') . '</td>';
-                            echo '<td style="text-align: center; font-weight: bold;">' . htmlspecialchars($entry['a'] ?? '') . '</td>';
-                            echo '<td style="text-align: center;">' . htmlspecialchars($entry['supervisor_q'] ?? '') . '</td>';
-                            echo '<td style="text-align: center;">' . htmlspecialchars($entry['supervisor_e'] ?? '') . '</td>';
-                            echo '<td style="text-align: center;">' . htmlspecialchars($entry['supervisor_t'] ?? '') . '</td>';
-                            echo '<td style="text-align: center; font-weight: bold;">' . htmlspecialchars($entry['supervisor_a'] ?? '') . '</td>';
-                            echo '<td>' . nl2br(htmlspecialchars($entry['remarks'] ?? '')) . '</td>';
-                            echo '</tr>';
+                            echo "<tr style='height:12.85pt'>";
+                            // MFO
+                            echo "<td width=195 valign=top style='width:146.55pt;border:solid black 1.0pt;border-top:none;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:\"Arial\",sans-serif'>" . nl2br(htmlspecialchars($entry['mfo'])) . "</span></p></td>";
+                            // Indicators
+                            echo "<td width=223 valign=top style='width:167.05pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:\"Arial\",sans-serif'>" . nl2br(htmlspecialchars($entry['success_indicators'])) . "</span></p></td>";
+                            // Accomplishments
+                            echo "<td width=239 valign=top style='width:179.6pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:\"Arial\",sans-serif'>" . nl2br(htmlspecialchars($entry['accomplishments'] ?? '')) . "</span></p></td>";
+                            
+                            // Ratings Helper
+                            $render_rating = function($val, $is_avg=false) {
+                                $width = $is_avg ? 48 : 43;
+                                $pt_width = $is_avg ? '35.95pt' : '32.25pt';
+                                echo "<td width=$width valign=top style='width:$pt_width;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center;line-height:normal'><span style='font-family:\"Arial\",sans-serif'>" . htmlspecialchars($val ?? '') . "</span></p></td>";
+                            };
+
+                            $render_rating($entry['q'] ?? '');
+                            $render_rating($entry['e'] ?? '');
+                            $render_rating($entry['t'] ?? '');
+                            $render_rating($entry['a'] ?? '', true);
+                            
+                            $render_rating($entry['supervisor_q'] ?? '');
+                            $render_rating($entry['supervisor_e'] ?? '');
+                            $render_rating($entry['supervisor_t'] ?? '');
+                            $render_rating($entry['supervisor_a'] ?? '', true);
+
+                            // Remarks
+                            echo "<td width=144 valign=top style='width:1.5in;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:\"Arial\",sans-serif'>" . nl2br(htmlspecialchars($entry['remarks'] ?? '')) . "</span></p></td>";
+                            echo "</tr>";
                         }
                     }
 
-                    render_ipcr_entries($strategic_functions, 'STRATEGIC FUNCTIONS');
-                    render_ipcr_entries($core_functions, 'CORE FUNCTIONS');
-                    render_ipcr_entries($support_functions, 'SUPPORT FUNCTIONS');
+                    render_ipcr_rows($strategic_functions, 'STRATEGIC FUNCTIONS');
+                    render_ipcr_rows($core_functions, 'CORE FUNCTIONS');
+                    render_ipcr_rows($support_functions, 'SUPPORT FUNCTIONS');
+                    
+                    // Summary Row Helper
+                    function render_summary_row($title, $self_avg, $sup_avg) {
+                        echo "<tr style='height:12.85pt'>";
+                        echo "<td width=195 valign=top style='width:146.55pt;border:solid black 1.0pt;border-top:none;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal style='margin-bottom:0in;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif;color:black'>$title</span></b></p></td>";
+                        // Empty cells
+                        echo "<td width=223 valign=top style='width:167.05pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal style='margin-bottom:0in;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif;color:black'>&nbsp;</span></b></p></td>";
+                        echo "<td width=239 valign=top style='width:179.6pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal style='margin-bottom:0in;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif;color:black'>&nbsp;</span></b></p></td>";
+                        
+                        // Self Ratings (Empty except Average)
+                        for($i=0; $i<3; $i++) echo "<td width=43 valign=bottom style='width:32.25pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif'>&nbsp;</span></b></p></td>";
+                        echo "<td width=48 valign=bottom style='width:35.95pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center;line-height:normal'><span style='font-family:\"Arial\",sans-serif'>" . htmlspecialchars($self_avg) . "</span></p></td>";
+                        
+                        // Sup Ratings (Empty except Average)
+                        for($i=0; $i<3; $i++) echo "<td width=43 valign=bottom style='width:32.25pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif'>&nbsp;</span></b></p></td>";
+                        echo "<td width=44 valign=bottom style='width:33.1pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center;line-height:normal'><span style='font-family:\"Arial\",sans-serif;color:black'>" . htmlspecialchars($sup_avg) . "</span></p></td>";
+                        
+                        echo "<td width=144 valign=top style='width:1.5in;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal style='margin-bottom:0in;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif'>&nbsp;</span></b></p></td>";
+                        echo "</tr>";
+                    }
+
+                    render_summary_row('Total Strategic Function', $content['summary']['strategic_average'] ?? '', $content['supervisor_summary']['strategic_average'] ?? '');
+                    render_summary_row('Total Core Function', $content['summary']['core_average'] ?? '', $content['supervisor_summary']['core_average'] ?? '');
+                    render_summary_row('Total Support Function', $content['summary']['support_average'] ?? '', $content['supervisor_summary']['support_average'] ?? '');
+                    
+                    // Final Rating Row
+                    echo "<tr style='height:12.85pt'>";
+                    echo "<td width=195 valign=top style='width:146.55pt;border:solid black 1.0pt;border-top:none;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal style='margin-bottom:0in;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif;color:black'>Final Average Rating</span></b></p></td>";
+                    echo "<td width=223 valign=top style='width:167.05pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal style='margin-bottom:0in;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif;color:black'>&nbsp;</span></b></p></td>";
+                    echo "<td width=239 valign=top style='width:179.6pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal style='margin-bottom:0in;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif;color:black'>&nbsp;</span></b></p></td>";
+                    // Empty Self
+                    for($i=0; $i<3; $i++) echo "<td width=43 valign=bottom style='width:32.25pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif'>&nbsp;</span></b></p></td>";
+                    echo "<td width=44 valign=bottom style='width:33.1pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif'>" . htmlspecialchars($content['summary']['final_rating'] ?? '') . "</span></b></p></td>";
+                    // Empty Sup Q, E, T
+                    for($i=0; $i<3; $i++) echo "<td width=43 valign=bottom style='width:32.25pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif'>&nbsp;</span></b></p></td>";
+                    // Sup Final
+                    echo "<td width=44 valign=bottom style='width:33.1pt;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal align=center style='margin-bottom:0in;text-align:center;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif'>" . htmlspecialchars($content['supervisor_summary']['final_rating'] ?? '') . "</span></b></p></td>";
+                    // Adjectival Rating in Remarks
+                    echo "<td width=144 valign=top style='width:1.5in;border-top:none;border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'><p class=MsoNormal style='margin-bottom:0in;line-height:normal'><b><span style='font-family:\"Arial\",sans-serif'>" . htmlspecialchars($content['supervisor_summary']['adjectival_rating'] ?? '') . "</span></b></p></td>";
+                    echo "</tr>";
                     ?>
                     
-                    <tr>
-                        <td colspan="6" style="text-align: right; font-weight: bold; border-left: none; border-bottom: none;">Total Strategic Function</td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['strategic_average'] ?? ''); ?></td>
-                        <td colspan="3" style="border: none;"></td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['supervisor_strategic_average'] ?? ''); ?></td>
-                        <td style="border-right: none;"></td>
+                    <!-- Comments Section -->
+                    <tr style='height:12.85pt'>
+                        <td width=1152 colspan=12 valign=top style='width:863.75pt;border:solid black 1.0pt; border-top:none;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'>
+                            <p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:"Arial",sans-serif'>Comments and Recommendations for Development Purposes</span></p>
+                        </td>
                     </tr>
-                    <tr>
-                        <td colspan="6" style="text-align: right; font-weight: bold; border-left: none; border-bottom: none;">Total Core Function</td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['core_average'] ?? ''); ?></td>
-                        <td colspan="3" style="border: none;"></td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['supervisor_core_average'] ?? ''); ?></td>
-                        <td style="border-right: none;"></td>
+                    <tr style='height:12.85pt'>
+                        <td width=1152 colspan=12 valign=top style='width:863.75pt;border:solid black 1.0pt; border-top:none;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'>
+                            <p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:"Arial",sans-serif'><?php echo nl2br(htmlspecialchars($content['dh_comments'] ?? '')); ?></span></p>
+                            <p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:"Arial",sans-serif'>&nbsp;</span></p>
+                        </td>
                     </tr>
-                    <tr>
-                        <td colspan="6" style="text-align: right; font-weight: bold; border-left: none; border-bottom: none;">Total Support Function</td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['support_average'] ?? ''); ?></td>
-                        <td colspan="3" style="border: none;"></td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['supervisor_support_average'] ?? ''); ?></td>
-                        <td style="border-right: none;"></td>
+                    
+                    <!-- Signatures Section -->
+                    <tr style='height:88.55pt'>
+                        <td width=418 colspan=2 valign=top style='width:313.6pt;border:solid black 1.0pt; border-top:none;padding:0in 5.4pt 0in 5.4pt;height:88.55pt'>
+                            <p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:"Arial",sans-serif'>I hereby certify that I agree with the ratings of my immediate supervisor.</span></p>
+                            <p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:"Arial",sans-serif'>&nbsp;</span></p>
+                            <p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:"Arial",sans-serif'>&nbsp;</span></p>
+                            <p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><b><span style='font-family:"Arial",sans-serif'><?php echo htmlspecialchars($record['employee_name']); ?></span></b></p>
+                        </td>
+                        <td width=239 rowspan=2 valign=top style='width:179.6pt;border-top:none; border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt; padding:0in 5.4pt 0in 5.4pt;height:88.55pt'>
+                            <p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:"Arial",sans-serif;color:black'>Date</span></p>
+                            <p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:"Arial",sans-serif'>&nbsp;</span></p>
+                            <p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><b><span style='font-family:"Arial",sans-serif'><?php echo htmlspecialchars($record['date_approved']); ?></span></b></p>
+                        </td>
+                        <td width=350 colspan=8 valign=top style='width:262.55pt;border-top:none; border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt; padding:0in 5.4pt 0in 5.4pt;height:88.55pt'>
+                            <p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:"Arial",sans-serif'>Assessed by:</span></p>
+                            <p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:"Arial",sans-serif'><br> I hereby certify that I discussed my assessment of the performance with the employee.</span></p>
+                            <p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:"Arial",sans-serif'>&nbsp;</span></p>
+                            <p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><b><span style='font-family:"Arial",sans-serif'><?php echo htmlspecialchars($record['reviewer_name'] ?? '__________________'); ?></span></b></p>
+                        </td>
+                        <td width=144 rowspan=2 valign=top style='width:1.5in;border-top:none; border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt; padding:0in 5.4pt 0in 5.4pt;height:88.55pt'>
+                            <p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:"Arial",sans-serif'>Date</span></p>
+                            <p class=MsoNormal style='margin-bottom:0in;line-height:normal'><span style='font-family:"Arial",sans-serif'>&nbsp;</span></p>
+                            <p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><b><span style='font-family:"Arial",sans-serif'><?php echo htmlspecialchars($record['date_approved']); ?></span></b></p>
+                        </td>
                     </tr>
-                    <tr>
-                        <td colspan="6" style="text-align: right; font-weight: bold;">Final Average Rating</td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['final_rating'] ?? ''); ?></td>
-                        <td colspan="3" style="text-align: right; font-weight: bold;">Final Average Rating</td>
-                        <td style="text-align: center; font-weight: bold;"><?php echo htmlspecialchars($content['supervisor_final_rating'] ?? ''); ?></td>
-                        <td style="font-weight: bold;"><?php echo htmlspecialchars($content['supervisor_rating_interpretation'] ?? ''); ?></td>
+                    <tr style='height:12.85pt'>
+                        <td width=418 colspan=2 valign=top style='width:313.6pt;border:solid black 1.0pt; border-top:none;padding:0in 5.4pt 0in 5.4pt;height:12.85pt'>
+                            <p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><span style='font-family:"Arial",sans-serif;color:black'>Employee</span></p>
+                        </td>
+                        <td width=350 colspan=8 valign=top style='width:262.55pt;border-top:none; border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt; padding:0in 5.4pt 0in 5.4pt;height:12.85pt'>
+                            <p class=MsoNormal align=center style='margin-bottom:0in;text-align:center; line-height:normal'><span style='font-family:"Arial",sans-serif'>Supervisor</span></p>
+                        </td>
                     </tr>
-                </tbody>
-            </table>
-
-            <div style="border: 1px solid #000; padding: 5px; margin-bottom: 20px; ">
-                <div style="font-weight: bold;">Comments and Recommendations for Development Purposes</div>
-                <?php echo nl2br(htmlspecialchars($record['feedback'] ?? '')); ?>
+                    </tbody>
+                </table>
+            
+                <p class=MsoNormal><i><span style='font-family:"Arial",sans-serif'>Legend:         1 - Quantity          2 - Efficiency          3 - Timeliness          4 - Average</span></i></p>
             </div>
-            
-            <table style="width: 100%; border: none; margin-top: 50px; font-size: 10pt;">
-                <tr>
-                    <td style="width: 50%; border: none; padding: 10px 0;">
-                        I hereby certify that I agree with the ratings of my immediate supervisor.
-                        <div style="margin-top: 30px; text-align: center; border-bottom: 1px solid #000; width: 80%; margin-left: 10%;">
-                            <?php echo htmlspecialchars($record['employee_name']); ?>
-                        </div>
-                        <div style="text-align: center; width: 80%; margin-left: 10%;">Employee</div>
-                    </td>
-                    <td style="width: 50%; border: none; padding: 10px 0;">
-                        Assessed by:
-                        <div style="margin-top: 30px; text-align: center; border-bottom: 1px solid #000; width: 80%; margin-left: 10%;">
-                            <?php echo htmlspecialchars($record['reviewer_name'] ?? '____________________'); ?>
-                        </div>
-                        <div style="text-align: center; width: 80%; margin-left: 10%;">Supervisor</div>
-                    </td>
-                </tr>
-            </table>
-            
-            <table style="width: 100%; border: none; margin-top: 20px; font-size: 9pt;">
-                <tr>
-                    <td style="width: 50%; border: none;">
-                        **Legend** *1 - Quantity* &nbsp;&nbsp;&nbsp; *2 - Efficiency* &nbsp;&nbsp;&nbsp; *3 - Timeliness* &nbsp;&nbsp;&nbsp; *4 - Average*
-                    </td>
-                    <td style="width: 50%; border: none; text-align: right; font-weight: bold;">
-                        Date: <?php echo date('F d, Y'); ?>
-                    </td>
-                </tr>
-            </table>
-
         <?php endif; ?>
         
         <!-- IDP Form Content -->
         <?php if ($record['form_type'] === 'IDP'): 
-            $content = json_decode($record['content'], true) ?? [];
+            $content = json_decode($record['content'], true);
+            $idp_goals = $content['idp_goals'] ?? [];
             ?>
             
-            <div class="header-info">
-            <img src="images/CCA.jpg" alt="CCA Logo" onerror="this.onerror=null; this.src='https://placehold.co/70x70/cccccc/333333?text=Logo'">
-            <div class="header-text">
-                <h4>Republic of the Philippines</h4>
-                <h4>City College of Angeles</h4>
-                <h3>STRATEGIC PERFORMANCE MANAGEMENT SYSTEM (SPMS)</h3>
+            <div class="idp-header">
+                <h1>REPUBLIC OF THE PHILIPPINES</h1>
+                <h1>CITY GOVERNMENT OF ANGELES</h1>
+                <h1>STRATEGIC PERFORMANCE MANAGEMENT SYSTEM (SPMS)</h1>
+                <br>
+                <h2>INDIVIDUAL DEVELOPMENT PLAN</h2>
+                <h2>(TARGET SETTING)</h2>
+                <p>For the Period of <strong><?php echo htmlspecialchars($record['period']); ?></strong></p>
             </div>
-        </div>
 
-        <!-- EMPLOYEE AND RECORD DETAILS -->
-        <div class="employee-details">
-            <div class="row">
-                <div class="col-6">
-                    <p><strong>Employee Name:</strong> <?php echo $record['employee_name']; ?></p>
-                </div>
-                <div class="col-6">
-                    <p><strong>Department/Office:</strong> <?php echo $record['department_name']; ?></p>
-                </div>
+            <div class="idp-section">
+                <div class="idp-info-row"><strong>Name:</strong> <?php echo htmlspecialchars($record['employee_name']); ?></div>
+                <div class="idp-info-row"><strong>Position:</strong> <?php echo htmlspecialchars($record['employee_position'] ?? 'N/A'); ?></div>
+                <div class="idp-info-row"><strong>Department/Office:</strong> <?php echo htmlspecialchars($record['department_name'] ?? 'N/A'); ?></div>
             </div>
-            <p><strong>Record ID:</strong> <?php echo $record_id; ?></p>
-            <p><strong>Period Covered:</strong> <?php echo $record['period']; ?></p>
-            <p><strong>Reviewer:</strong> <?php echo ($dept_head_name); ?></p>
-        </div>
-            <h4 style="margin-top: 20px; margin-bottom: 10px; text-align: center;">Development Goals</h4>
             
-            <!-- IDP TABLE -->
-            <table class="table table-bordered table-sm form-table">
-                <thead>
-                    <tr>
-                        <th style="width: 25%;">Main Objective/s</th>
-                        <th style="width: 30%;">Plan of Action</th>
-                        <th style="width: 15%;">Target Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($idp_goals)): ?>
+            <?php if (empty($idp_goals)): ?>
+                <p class="text-center">No development goals found.</p>
+            <?php else: ?>
+                <?php foreach ($idp_goals as $goal): ?>
+                    <table class="idp-table">
                         <tr>
-                            <td colspan="5" style="text-align: center;">No Individual Development Plan entries found.</td>
+                            <td width="50%">
+                                <strong>Main Objective/s:</strong>
+                                <p><?php echo nl2br(htmlspecialchars($goal['objective'] ?? '')); ?></p>
+                            </td>
+                            <td width="50%">
+                                <strong>Target Date:</strong>
+                                <p><?php echo htmlspecialchars($record['period']); ?></p>
+                            </td>
                         </tr>
-                    <?php else: ?>
                         <tr>
-                            <td><?php echo nl2br(htmlspecialchars($objective_entry ?? '')); ?></td>
-                            <td><?php echo nl2br(htmlspecialchars($action_plan_entry ?? '')); ?></td>
-                            <td><?php echo nl2br(htmlspecialchars($target_date_entry ?? '')); ?></td>
+                            <td colspan="2">
+                                <strong>Plan of Action:</strong>
+                                <p><?php echo nl2br(htmlspecialchars($goal['action_plan'] ?? '')); ?></p>
+                            </td>
                         </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                    </table>
 
-            <!-- Signature Block for IDP -->
-            <div class="signature-block">
-                <div class="signature-item">
-                    <div class="signature-line"></div>
-                    <p class="signature-label">Employee Signature over Printed Name</p>
+                    <table class="idp-table">
+                        <tr>
+                            <td width="50%">
+                                <strong>Status(is the plan accomplished or not):</strong>
+                                <p><?php echo htmlspecialchars($goal['status'] ?? 'Not Started'); ?></p>
+                            </td>
+                            <td width="50%">
+                                <strong>Date/Period Accomplished:</strong>
+                                <p><?php echo htmlspecialchars($goal['date_accomplished'] ?? ''); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>Result/s or Outcome/s for Accomplished Plan:</strong>
+                                <p><?php echo nl2br(htmlspecialchars($goal['results'] ?? '')); ?></p>
+                            </td>
+                            <td>
+                                <strong>Comment/s or Remark/s of the Supervisor/Head:</strong>
+                            </td>
+                        </tr>
+                    </table>
+                    <br>
+                <?php endforeach; ?>
+            <?php endif; ?>
+
+            <div class="idp-signature-section">
+                <div style="text-align: center;">
+                    <p>_________________________</p>
+                    <p>Employee's Signature</p>
                 </div>
-                <div class="signature-item">
-                    <div class="signature-line"></div>
-                    <p class="signature-label"><?php echo htmlspecialchars($dept_head_name); ?><br>Department Head Signature over Printed Name</p>
+                <div style="text-align: center;">
+                    <p>_________________________</p>
+                    <p>Signature of Supervisor/Head</p>
                 </div>
             </div>
         <?php endif; ?>

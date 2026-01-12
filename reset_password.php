@@ -8,17 +8,7 @@ if (isset($_SESSION['user_id'])) {
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 $message = "";
 $message_type = "";
@@ -43,7 +33,6 @@ if (isset($_GET['token']) && !empty($_GET['token'])) {
         $message = "Invalid or expired token. Please request a new password reset link.";
         $message_type = "danger";
     }
-    var_dump("deyum");
 } else {
     $message = "No reset token provided. Please request a password reset from the forgot password page.";
     $message_type = "danger";

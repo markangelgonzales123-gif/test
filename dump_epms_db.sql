@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jan 12, 2026 at 03:50 AM
+-- Generation Time: Jan 07, 2026 at 11:26 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -85,6 +85,14 @@ CREATE TABLE `dpcr_entries` (
   `remarks` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `dpcr_entries`
+--
+
+INSERT INTO `dpcr_entries` (`id`, `record_id`, `major_output`, `success_indicators`, `budget`, `accountable`, `accomplishments`, `category`, `q1_rating`, `q2_rating`, `q3_rating`, `q4_rating`, `weight`, `created_at`, `updated_at`, `actual_accomplishments`, `q_rating`, `e_rating`, `t_rating`, `a_rating`, `remarks`) VALUES
+(1, 20, 'qwe', 'qwe', 1.00, '2', NULL, 'Strategic', NULL, NULL, NULL, NULL, NULL, '2026-01-07 01:54:24', '2026-01-07 01:54:24', 'qweqwe', 3.00, 3.00, 3.00, 3.00, 'qweqwe'),
+(2, 20, 'qweqwe', 'qweqwe', 332131.00, '3213', NULL, 'Core', NULL, NULL, NULL, NULL, NULL, '2026-01-07 01:54:24', '2026-01-07 01:54:24', 'qweqwe', 2.00, 2.00, 2.00, 2.00, 'qasdasdwqe');
+
 -- --------------------------------------------------------
 
 --
@@ -162,9 +170,7 @@ INSERT INTO `notifications` (`id`, `user_id`, `message`, `link`, `is_read`, `cre
 (11, 9, 'New form submission requires your review', 'view_record.php?id=7', 0, '2026-01-04 13:16:28'),
 (12, 9, 'New form submission requires your review', 'view_record.php?id=8', 0, '2026-01-06 16:36:43'),
 (13, 69, 'Your IPCR for Q1 2026 has been APPROVED', 'view_record.php?id=8', 0, '2026-01-06 16:38:13'),
-(14, 9, 'New form submission requires your review', 'view_record.php?id=9', 0, '2026-01-06 20:53:22'),
-(15, 9, 'New form submission requires your review', 'view_record.php?id=43', 0, '2026-01-09 01:35:07'),
-(16, 9, 'New form submission requires your review', 'view_record.php?id=44', 0, '2026-01-11 18:55:16');
+(14, 9, 'New form submission requires your review', 'view_record.php?id=9', 0, '2026-01-06 20:53:22');
 
 -- --------------------------------------------------------
 
@@ -234,12 +240,13 @@ CREATE TABLE `records` (
 --
 
 INSERT INTO `records` (`id`, `user_id`, `form_type`, `period`, `content`, `document_status`, `date_submitted`, `date_approved`, `reviewed_by`, `date_reviewed`, `comments`, `computation_type`, `feedback`, `confidential_remarks`, `position`, `created_by`, `date_created`) VALUES
-(35, 69, 'IPCR', 'Q4 2026', '{\"period\":\"Q4 2026\",\"computation_type\":\"Type1\",\"strategic_functions\":[{\"mfo\":\"2\",\"success_indicators\":\"23123wqeqweqw\",\"remarks\":\"eewqe123\",\"accomplishments\":\"231123\",\"q\":\"4\",\"e\":\"3\",\"t\":\"3\",\"a\":\"3.33\",\"supervisor_q\":\"2\",\"supervisor_e\":\"2\",\"supervisor_t\":\"2\",\"supervisor_a\":\"2.00\"}],\"core_functions\":[{\"mfo\":\"\",\"success_indicators\":\"<-emptyqweqweqw\",\"remarks\":\"e2312asdqweqw3wqe\",\"accomplishments\":\"23123123\",\"q\":\"2\",\"e\":\"5\",\"t\":\"1\",\"a\":\"2.67\",\"supervisor_q\":\"4\",\"supervisor_e\":\"2\",\"supervisor_t\":\"4\",\"supervisor_a\":\"3.33\"}],\"support_functions\":[],\"summary\":{\"strategic_average\":\"1.35\",\"core_average\":\"1.47\",\"support_average\":\"0.00\",\"final_rating\":\"2.82\",\"adjectival_rating\":\"Satisfactory\"},\"dh_comments\":\"asdasdasd\",\"supervisor_summary\":{\"strategic_average\":\"0.90\",\"core_average\":\"1.83\",\"support_average\":\"0.00\",\"final_rating\":\"2.73\",\"adjectival_rating\":\"Satisfactory\"}}', 'Approved', '2026-01-08 21:03:33', '2026-01-08 21:03:33', NULL, NULL, NULL, 'Type1', NULL, NULL, '', 9, '2026-01-09 03:42:03'),
-(39, 69, 'IPCR', 'Q2 2026', '{\"period\":\"Q2 2026\",\"computation_type\":\"Type1\",\"strategic_functions\":[{\"mfo\":\"qwew\",\"success_indicators\":\"wqeqwe\",\"remarks\":\"wqe\",\"accomplishments\":\"wqeqwe\",\"q\":\"2\",\"e\":\"2\",\"t\":\"3\",\"a\":\"2.33\",\"supervisor_q\":\"\",\"supervisor_e\":\"\",\"supervisor_t\":\"\",\"supervisor_a\":\"\"}],\"core_functions\":[],\"support_functions\":[],\"summary\":{\"strategic_average\":\"1.05\",\"core_average\":\"0.00\",\"support_average\":\"0.00\",\"final_rating\":\"1.05\",\"adjectival_rating\":\"Poor\"}}', 'For Review', '2026-01-09 01:24:59', NULL, NULL, NULL, NULL, 'Type1', NULL, NULL, '', 9, '2026-01-09 05:21:11'),
-(40, 71, 'IPCR', 'Q2 2026', '{\"period\":\"Q2 2026\",\"computation_type\":\"Type1\",\"strategic_functions\":[{\"mfo\":\"qwew\",\"success_indicators\":\"wqeqwe\",\"remarks\":\"wqe\",\"accomplishments\":\"\",\"q\":\"\",\"e\":\"\",\"t\":\"\",\"a\":\"\",\"supervisor_q\":\"\",\"supervisor_e\":\"\",\"supervisor_t\":\"\",\"supervisor_a\":\"\"}],\"core_functions\":[],\"support_functions\":[]}', 'Distributed', NULL, NULL, NULL, NULL, NULL, 'Type1', NULL, NULL, '', 9, '2026-01-09 05:21:11'),
-(41, 69, 'IPCR', 'Q3 2026', '{\"period\":\"Q3 2026\",\"computation_type\":\"Type1\",\"strategic_functions\":[{\"mfo\":\"qwe\",\"success_indicators\":\"qwe\",\"remarks\":\"qwe\",\"accomplishments\":\"gotit\",\"q\":\"2\",\"e\":\"2\",\"t\":\"3\",\"a\":\"2.33\",\"supervisor_q\":\"1\",\"supervisor_e\":\"1\",\"supervisor_t\":\"2\",\"supervisor_a\":\"1.33\"}],\"core_functions\":[{\"mfo\":\"asdas\",\"success_indicators\":\"qwe\",\"remarks\":\"qwe\",\"accomplishments\":\"ok\",\"q\":\"2\",\"e\":\"3\",\"t\":\"3\",\"a\":\"2.67\",\"supervisor_q\":\"5\",\"supervisor_e\":\"4\",\"supervisor_t\":\"4\",\"supervisor_a\":\"4.33\"}],\"support_functions\":[],\"summary\":{\"strategic_average\":\"1.05\",\"core_average\":\"1.47\",\"support_average\":\"0.00\",\"final_rating\":\"2.52\",\"adjectival_rating\":\"Satisfactory\"},\"dh_comments\":\"testsetse\",\"supervisor_summary\":{\"strategic_average\":\"0.60\",\"core_average\":\"2.38\",\"support_average\":\"0.00\",\"final_rating\":\"2.98\",\"adjectival_rating\":\"Satisfactory\"}}', 'Rejected', '2026-01-09 01:54:21', NULL, NULL, NULL, NULL, 'Type1', NULL, NULL, '', 9, '2026-01-09 05:28:40'),
-(42, 71, 'IPCR', 'Q3 2026', '{\"period\":\"Q3 2026\",\"computation_type\":\"Type1\",\"strategic_functions\":[{\"mfo\":\"qwe\",\"success_indicators\":\"qwe\",\"remarks\":\"qwe\",\"accomplishments\":\"\",\"q\":\"\",\"e\":\"\",\"t\":\"\",\"a\":\"\",\"supervisor_q\":\"\",\"supervisor_e\":\"\",\"supervisor_t\":\"\",\"supervisor_a\":\"\"}],\"core_functions\":[{\"mfo\":\"\",\"success_indicators\":\"qwe\",\"remarks\":\"qwe\",\"accomplishments\":\"\",\"q\":\"\",\"e\":\"\",\"t\":\"\",\"a\":\"\",\"supervisor_q\":\"\",\"supervisor_e\":\"\",\"supervisor_t\":\"\",\"supervisor_a\":\"\"}],\"support_functions\":[]}', 'Distributed', NULL, NULL, NULL, NULL, NULL, 'Type1', NULL, NULL, '', 9, '2026-01-09 05:28:40'),
-(44, 69, 'IDP', 'January 2026 - June 2026', '{\"idp_goals\":[{\"objective\":\"test\",\"action_plan\":\"test\",\"status\":\"Not Started\"}]}', 'Approved', '2026-01-11 18:55:16', NULL, 9, '2026-01-11 18:56:49', '', 'Type1', NULL, NULL, '', NULL, '2026-01-12 02:55:16');
+(16, 69, 'IPCR', 'Q1 2026', '{\"period\":\"Q1 2026\",\"computation_type\":\"Type1\",\"strategic_functions\":[{\"mfo\":\"test\",\"success_indicators\":\"test\",\"remarks\":\"a\",\"accomplishments\":\"qweqweqwe\",\"q\":\"2\",\"e\":\"2\",\"t\":\"2\",\"a\":\"2.00\",\"supervisor_q\":\"2\",\"supervisor_e\":\"2\",\"supervisor_t\":\"3\",\"supervisor_a\":\"2.33\"}],\"core_functions\":[{\"mfo\":\"b\",\"success_indicators\":\"b\",\"remarks\":\"b\",\"accomplishments\":\"bichqweqweqwe\",\"q\":\"2\",\"e\":\"3\",\"t\":\"3\",\"a\":\"2.67\",\"supervisor_q\":\"2\",\"supervisor_e\":\"3\",\"supervisor_t\":\"3\",\"supervisor_a\":\"2.67\"}],\"support_functions\":[],\"dh_comments\":\"nice done\"}', 'Approved', '2026-01-07 01:26:08', '2026-01-07 01:26:08', NULL, NULL, NULL, 'Type1', NULL, NULL, '', 9, '2026-01-07 06:48:27'),
+(17, 71, 'IPCR', 'Q1 2026', '{\"period\":\"Q1 2026\",\"computation_type\":\"Type1\",\"strategic_functions\":[{\"mfo\":\"test\",\"success_indicators\":\"test\",\"remarks\":\"a\",\"accomplishments\":\"\",\"q\":\"\",\"e\":\"\",\"t\":\"\",\"a\":\"\",\"supervisor_q\":\"\",\"supervisor_e\":\"\",\"supervisor_t\":\"\",\"supervisor_a\":\"\"}],\"core_functions\":[{\"mfo\":\"b\",\"success_indicators\":\"b\",\"remarks\":\"b\",\"accomplishments\":\"\",\"q\":\"\",\"e\":\"\",\"t\":\"\",\"a\":\"\",\"supervisor_q\":\"\",\"supervisor_e\":\"\",\"supervisor_t\":\"\",\"supervisor_a\":\"\"}],\"support_functions\":[]}', 'Distributed', NULL, NULL, NULL, NULL, NULL, 'Type1', NULL, NULL, '', 9, '2026-01-07 06:48:27'),
+(18, 69, 'IPCR', 'Q2 2026', '{\"period\":\"Q2 2026\",\"computation_type\":\"Type1\",\"strategic_functions\":[{\"mfo\":\"qweq\",\"success_indicators\":\"qweqwe\",\"remarks\":\"qweqwe\",\"accomplishments\":\"i fill this outqqweweqwe\",\"q\":\"2\",\"e\":\"2\",\"t\":\"3\",\"a\":\"2.33\",\"supervisor_q\":\"2\",\"supervisor_e\":\"2\",\"supervisor_t\":\"2\",\"supervisor_a\":\"2.00\"}],\"core_functions\":[{\"mfo\":\"qweqwe\",\"success_indicators\":\"qweqwe\",\"remarks\":\"qweqwe\",\"accomplishments\":\"weqweqdsasdqw\",\"q\":\"3\",\"e\":\"3\",\"t\":\"3\",\"a\":\"3.00\",\"supervisor_q\":\"1\",\"supervisor_e\":\"2\",\"supervisor_t\":\"2\",\"supervisor_a\":\"1.67\"}],\"support_functions\":[],\"dh_comments\":\"nice\"}', 'Approved', '2026-01-07 01:43:15', '2026-01-07 01:43:15', NULL, NULL, NULL, 'Type1', NULL, NULL, '', 9, '2026-01-07 09:37:21'),
+(19, 71, 'IPCR', 'Q2 2026', '{\"period\":\"Q2 2026\",\"computation_type\":\"Type1\",\"strategic_functions\":[{\"mfo\":\"qweq\",\"success_indicators\":\"qweqwe\",\"remarks\":\"qweq\",\"accomplishments\":\"\",\"q\":\"\",\"e\":\"\",\"t\":\"\",\"a\":\"\",\"supervisor_q\":\"\",\"supervisor_e\":\"\",\"supervisor_t\":\"\",\"supervisor_a\":\"\"}],\"core_functions\":[{\"mfo\":\"qweqwe\",\"success_indicators\":\"qweqwe\",\"remarks\":\"qweqwe\",\"accomplishments\":\"\",\"q\":\"\",\"e\":\"\",\"t\":\"\",\"a\":\"\",\"supervisor_q\":\"\",\"supervisor_e\":\"\",\"supervisor_t\":\"\",\"supervisor_a\":\"\"}],\"support_functions\":[]}', 'Distributed', NULL, NULL, NULL, NULL, NULL, 'Type1', NULL, NULL, '', 9, '2026-01-07 09:37:21'),
+(20, 9, 'DPCR', 'Q1 2026', NULL, 'Draft', NULL, NULL, NULL, NULL, NULL, 'Type1', NULL, NULL, '', NULL, '2026-01-07 09:54:24'),
+(21, 69, 'IPCR', 'Q1 2026', '{\"period\":\"Q1 2026\",\"computation_type\":\"Type1\",\"strategic_functions\":[{\"mfo\":\"123\",\"success_indicators\":\"123\",\"remarks\":\"123\",\"accomplishments\":\"\",\"q\":\"\",\"e\":\"\",\"t\":\"\",\"a\":\"\",\"supervisor_q\":\"\",\"supervisor_e\":\"\",\"supervisor_t\":\"\",\"supervisor_a\":\"\"}],\"core_functions\":[{\"mfo\":\"123\",\"success_indicators\":\"123\",\"remarks\":\"123\",\"accomplishments\":\"\",\"q\":\"\",\"e\":\"\",\"t\":\"\",\"a\":\"\",\"supervisor_q\":\"\",\"supervisor_e\":\"\",\"supervisor_t\":\"\",\"supervisor_a\":\"\"}],\"support_functions\":[]}', 'Distributed', NULL, NULL, NULL, NULL, NULL, 'Type1', NULL, NULL, '', 9, '2026-01-08 06:09:14'),
+(22, 71, 'IPCR', 'Q1 2026', '{\"period\":\"Q1 2026\",\"computation_type\":\"Type1\",\"strategic_functions\":[{\"mfo\":\"123\",\"success_indicators\":\"123\",\"remarks\":\"123\",\"accomplishments\":\"\",\"q\":\"\",\"e\":\"\",\"t\":\"\",\"a\":\"\",\"supervisor_q\":\"\",\"supervisor_e\":\"\",\"supervisor_t\":\"\",\"supervisor_a\":\"\"}],\"core_functions\":[{\"mfo\":\"123\",\"success_indicators\":\"123\",\"remarks\":\"123\",\"accomplishments\":\"\",\"q\":\"\",\"e\":\"\",\"t\":\"\",\"a\":\"\",\"supervisor_q\":\"\",\"supervisor_e\":\"\",\"supervisor_t\":\"\",\"supervisor_a\":\"\"}],\"support_functions\":[]}', 'Distributed', NULL, NULL, NULL, NULL, NULL, 'Type1', NULL, NULL, '', 9, '2026-01-08 06:09:14');
 
 -- --------------------------------------------------------
 
@@ -283,7 +290,7 @@ CREATE TABLE `users` (
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
   `role` enum('admin','president','department_head','regular_employee','user') NOT NULL DEFAULT 'user',
-  `position` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `position` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `department_id` int(11) DEFAULT NULL,
   `avatar` varchar(255) DEFAULT NULL,
   `remember_token` varchar(255) DEFAULT NULL,
@@ -296,27 +303,27 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `position`, `department_id`, `avatar`, `remember_token`, `created_at`, `updated_at`) VALUES
-(1, 'Admin', 'asantos@cca.edu.ph', 'asd', 'admin', '', 1, NULL, NULL, '2025-04-18 04:51:59', '2026-01-03 03:59:53'),
-(2, 'Arnie Santos', 'arniesantos@cca.edu.ph', 'qwe', 'department_head', '', 1, NULL, NULL, '2025-04-18 04:51:59', '2025-12-15 09:44:58'),
-(5, 'HR Manager', 'hrmanager@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'department_head', '', 2, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
-(6, 'Faculty Member', 'faculty@cca.edu.ph', '$2y$10$5M1sLMEQfuw9A4Xmn0n8g.YUEnfGBEw0W3Pn8KG2v7tCgY6l9A5Ea', 'regular_employee', '', 1, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
-(7, 'DR. CAROLINA A. SARMIENTO', 'carolinasarmiento@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'president', '', 6, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
-(8, 'MS. AMOR L. BARBA', 'amorbarba@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'department_head', '', 4, NULL, NULL, '2025-04-18 04:51:59', '2025-11-02 13:10:41'),
+(1, 'Admin', 'asantos@cca.edu.ph', 'asd', 'admin', NULL, 1, NULL, NULL, '2025-04-18 04:51:59', '2026-01-03 03:59:53'),
+(2, 'Arnie Santos', 'arniesantos@cca.edu.ph', 'qwe', 'department_head', NULL, 1, NULL, NULL, '2025-04-18 04:51:59', '2025-12-15 09:44:58'),
+(5, 'HR Manager', 'hrmanager@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'department_head', NULL, 2, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
+(6, 'Faculty Member', 'faculty@cca.edu.ph', '$2y$10$5M1sLMEQfuw9A4Xmn0n8g.YUEnfGBEw0W3Pn8KG2v7tCgY6l9A5Ea', 'regular_employee', NULL, 1, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
+(7, 'DR. CAROLINA A. SARMIENTO', 'carolinasarmiento@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'president', NULL, 6, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
+(8, 'MS. AMOR L. BARBA', 'amorbarba@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'department_head', NULL, 4, NULL, NULL, '2025-04-18 04:51:59', '2025-11-02 13:10:41'),
 (9, 'MS. MAIKA V. GARBES', 'maikagarbes@cca.edu.ph', 'asd', 'department_head', 'ICSLIS Department Head', 8, NULL, 'ea0a7298bf7433bf30e7ab2390577223cbad5f7f73a51342de01782b1128d7b6', '2025-04-18 04:51:59', '2026-01-06 17:41:38'),
-(10, 'DR. LEVITA DE GUZMAN', 'levitaguzman@cca.edu.ph', 'qwe', 'department_head', '', 7, NULL, NULL, '2025-04-18 04:51:59', '2025-11-02 13:33:11'),
-(11, 'MS. MARIA TERESSA G. LAPUZ', 'mariateressalapuz@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'department_head', '', 10, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
-(12, 'MR. LESSANDRO YUCON', 'lessandroyucon@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'department_head', '', 11, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
-(13, 'MS. JASMINE ANGELICA MARIE CANLAS', 'jasmineangelicacanlas@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'department_head', '', 12, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
-(14, 'DR. RHENAN ESTACIO', 'rhenanestacio@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'department_head', '', 13, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
-(15, 'ADMIN NGA KOOO', 'admin@cca.edu.ph', 'admin123', 'admin', '', 1, 'uploads/avatars/7_6801c5d913a3f.jpg', '', '2025-04-18 02:34:36', '2025-04-18 03:24:09'),
-(16, 'Benedict Ortiz', 'jortiz@cca.edu.ph', '$2y$10$ucBn/VaiNqycSyxaxSYGrOGkFSWuaXicSVT/Ftcmu8XQQG9pjHxWm', 'regular_employee', '', 1, 'uploads/avatars/9_6801cd09df7d1.jpg', '', '2025-04-18 02:43:16', '2025-04-18 03:54:49'),
-(17, 'Antonio Luna', 'henlun@cca.edu.ph', 'qwe', 'president', '', 2, 'uploads/avatars/12_6801c17a2cd64.jpg', '9bb4466b58b414e07f04261cd68158941888a531e08de034221229958b63057d', '2025-04-18 03:04:29', '2025-12-15 09:19:58'),
-(69, 'Qwe', 'test@cca.edu.ph', 'qwe', 'regular_employee', 'BSCS Program Coordinator', 8, 'uploads/avatars/9_6801cd09df7d1.jpg', '4e5b540b435ef51a3151dfc7079bc577e02bbe7f17eabb6c42925d77b8e74aab', '2025-04-18 02:43:16', '2026-01-08 23:49:55'),
-(70, 'qwe', 'qwe@gmail.com', 'qwe', 'department_head', '', 8, NULL, NULL, '2025-10-13 22:36:38', '2025-10-20 20:56:36'),
-(71, 'reset', 'reset@gmail.com', '$2y$10$wgGFje6boxFPRoW/wEq0V.DUZUyg0OV/F48Rv7hvsv/Tb7.u.J2KS', 'regular_employee', '', 8, NULL, '05d080eaf55cacad5e692bdf21ecbf1879d44bcfc144533a18cce37c58ece08c', '2025-10-21 16:35:36', '2025-10-21 17:58:30'),
-(72, 'wda', 'wdasd@gmail.com', '$2y$10$K3IoEFwHAXaE3idzO.rtouWAohfiIeib22vaMMl0JUeQyWt3vRO.e', 'regular_employee', '', 7, NULL, NULL, '2025-11-02 13:11:14', '2025-11-02 13:11:14'),
-(73, 'Justine Employee', 'jus.emp@email.com', '$2y$10$6xMckugbjRFdftZfERT2KusW7wuKkaZub.36iDxX6nlP6m77EIxIu', 'regular_employee', '', 5, NULL, NULL, '2025-11-03 13:42:44', '2025-11-03 13:44:19'),
-(74, 'Mark Dep Head', 'mark.dep.head@email.com', '$2y$10$Lxg3tUNpndMPNyffidqiZ.HI.R/hz/PGSOjCrgCH8ahfHSiAyU6LC', 'department_head', '', 5, NULL, NULL, '2025-11-03 13:45:53', '2025-11-03 13:45:53');
+(10, 'DR. LEVITA DE GUZMAN', 'levitaguzman@cca.edu.ph', 'qwe', 'department_head', NULL, 7, NULL, NULL, '2025-04-18 04:51:59', '2025-11-02 13:33:11'),
+(11, 'MS. MARIA TERESSA G. LAPUZ', 'mariateressalapuz@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'department_head', NULL, 10, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
+(12, 'MR. LESSANDRO YUCON', 'lessandroyucon@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'department_head', NULL, 11, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
+(13, 'MS. JASMINE ANGELICA MARIE CANLAS', 'jasmineangelicacanlas@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'department_head', NULL, 12, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
+(14, 'DR. RHENAN ESTACIO', 'rhenanestacio@cca.edu.ph', '$2y$10$/YPShKmJ3eyhIugceCmqvOzwr8FncHsV7fjUKN8ewL56/cLiCcele', 'department_head', NULL, 13, NULL, NULL, '2025-04-18 04:51:59', '2025-04-18 04:51:59'),
+(15, 'ADMIN NGA KOOO', 'admin@cca.edu.ph', 'admin123', 'admin', NULL, 1, 'uploads/avatars/7_6801c5d913a3f.jpg', '', '2025-04-18 02:34:36', '2025-04-18 03:24:09'),
+(16, 'Benedict Ortiz', 'jortiz@cca.edu.ph', '$2y$10$ucBn/VaiNqycSyxaxSYGrOGkFSWuaXicSVT/Ftcmu8XQQG9pjHxWm', 'regular_employee', NULL, 1, 'uploads/avatars/9_6801cd09df7d1.jpg', '', '2025-04-18 02:43:16', '2025-04-18 03:54:49'),
+(17, 'Antonio Luna', 'henlun@cca.edu.ph', 'qwe', 'president', NULL, 2, 'uploads/avatars/12_6801c17a2cd64.jpg', '9bb4466b58b414e07f04261cd68158941888a531e08de034221229958b63057d', '2025-04-18 03:04:29', '2025-12-15 09:19:58'),
+(69, 'Qwe', 'test@cca.edu.ph', 'qwe', 'regular_employee', 'BSCS Program Coordinator', 8, 'uploads/avatars/9_6801cd09df7d1.jpg', '4e5b540b435ef51a3151dfc7079bc577e02bbe7f17eabb6c42925d77b8e74aab', '2025-04-18 02:43:16', '2026-01-06 17:42:16'),
+(70, 'qwe', 'qwe@gmail.com', 'qwe', 'department_head', NULL, 8, NULL, NULL, '2025-10-13 22:36:38', '2025-10-20 20:56:36'),
+(71, 'reset', 'reset@gmail.com', '$2y$10$wgGFje6boxFPRoW/wEq0V.DUZUyg0OV/F48Rv7hvsv/Tb7.u.J2KS', 'regular_employee', NULL, 8, NULL, '05d080eaf55cacad5e692bdf21ecbf1879d44bcfc144533a18cce37c58ece08c', '2025-10-21 16:35:36', '2025-10-21 17:58:30'),
+(72, 'wda', 'wdasd@gmail.com', '$2y$10$K3IoEFwHAXaE3idzO.rtouWAohfiIeib22vaMMl0JUeQyWt3vRO.e', 'regular_employee', NULL, 7, NULL, NULL, '2025-11-02 13:11:14', '2025-11-02 13:11:14'),
+(73, 'Justine Employee', 'jus.emp@email.com', '$2y$10$6xMckugbjRFdftZfERT2KusW7wuKkaZub.36iDxX6nlP6m77EIxIu', 'regular_employee', NULL, 5, NULL, NULL, '2025-11-03 13:42:44', '2025-11-03 13:44:19'),
+(74, 'Mark Dep Head', 'mark.dep.head@email.com', '$2y$10$Lxg3tUNpndMPNyffidqiZ.HI.R/hz/PGSOjCrgCH8ahfHSiAyU6LC', 'department_head', NULL, 5, NULL, NULL, '2025-11-03 13:45:53', '2025-11-03 13:45:53');
 
 --
 -- Indexes for dumped tables
@@ -425,7 +432,7 @@ ALTER TABLE `ipcr_entries`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `pds_records`
@@ -443,7 +450,7 @@ ALTER TABLE `programs`
 -- AUTO_INCREMENT for table `records`
 --
 ALTER TABLE `records`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `system_settings`

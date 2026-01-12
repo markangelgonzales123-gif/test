@@ -29,40 +29,6 @@ if ($is_admin_section) {
 $has_pending_submissions = false;
 $pending_count = 0;
 
-if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'department_head') {
-    // Database connection
-    $host = "localhost";
-    $username = "root";
-    $password = "";
-    $database = "epms_db";
-    
-    $conn = new mysqli($host, $username, $password, $database);
-    
-    if (!$conn->connect_error) {
-        $department_id = $_SESSION['user_department_id'];
-        
-        // Check for pending submissions in the last 24 hours
-        $check_query = "SELECT COUNT(*) as pending_count FROM records r 
-                      JOIN users u ON r.user_id = u.id
-                      WHERE u.department_id = ? AND r.status = 'Pending' AND r.form_type = 'IPCR'
-                      AND r.date_submitted > DATE_SUB(NOW(), INTERVAL 1 DAY)";
-        
-        $stmt = $conn->prepare($check_query);
-        $stmt->bind_param("i", $department_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        if ($row = $result->fetch_assoc()) {
-            $pending_count = $row['pending_count'];
-            if ($pending_count > 0) {
-                $has_pending_submissions = true;
-            }
-        }
-        
-        $stmt->close();
-        $conn->close();
-    }
-}
 
 // Define menu items based on roles
 $menu_items = [];
@@ -86,6 +52,7 @@ switch ($_SESSION['user_role']) {
             ['icon' => 'bi bi-building', 'title' => 'Department DPCR', 'url' => $base_path . 'dpcr.php', 'active' => ($current_page == 'dpcr.php')],
             ['icon' => 'bi bi-person-vcard', 'title' => 'My IPCR', 'url' => $base_path . 'ipcr.php', 'active' => ($current_page == 'ipcr.php')],
             ['icon' => 'bi bi-people', 'title' => 'Staff IPCR', 'url' => $base_path . 'staff_ipcr.php', 'active' => ($current_page == 'staff_ipcr.php')],
+            ['icon' => 'bi bi-journal-text', 'title' => 'Staff IDP', 'url' => $base_path . 'staff_idp.php', 'active' => ($current_page == 'staff_idp.php')],
             ['icon' => 'bi bi-journal-text', 'title' => 'My IDP', 'url' => $base_path . 'idp.php', 'active' => ($current_page == 'idp.php')],
             ['icon' => 'bi bi-file-earmark-person', 'title' => 'My PDS', 'url' => $base_path . 'pdsT2.php', 'active' => ($current_page == 'pdsT2.php')],
             ['icon' => 'bi bi-list-check', 'title' => 'My Records', 'url' => $base_path . 'records.php', 'active' => ($current_page == 'records.php')],

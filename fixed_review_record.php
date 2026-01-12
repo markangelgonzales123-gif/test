@@ -24,16 +24,7 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 $record_id = intval($_GET['id']);
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get user information
 $user_id = $_SESSION['user_id'];
@@ -72,7 +63,7 @@ if (!$can_review) {
 }
 
 // Check if record is pending for review
-if ($record['status'] !== 'Pending') {
+if ($record['document_status'] !== 'Pending') {
     $_SESSION['error_message'] = "This record is not pending for review";
     header("Location: view_record.php?id=" . $record_id);
     exit();
@@ -538,7 +529,7 @@ if ($record['form_type'] === 'IDP') {
                     <h5 class="mb-0">Submit Review</h5>
                 </div>
                 <div class="card-body">
-                    <?php if ($record['status'] === 'Pending'): ?>
+                    <?php if ($record['document_status'] === 'Pending'): ?>
                         <form action="review_record.php?id=<?php echo $record_id; ?>" method="POST">
                             <div class="alert alert-info mb-3">
                                 <i class="bi bi-info-circle-fill me-2"></i>
@@ -587,8 +578,8 @@ if ($record['form_type'] === 'IDP') {
                                 <div>
                                     <h6 class="alert-heading mb-1">Review Status: 
                                     <?php
-                                        $status_badge_class = ($record['status'] === 'Approved') ? 'success' : 'danger';
-                                        echo '<span class="badge bg-' . $status_badge_class . '">' . $record['status'] . '</span>'; 
+                                        $status_badge_class = ($record['document_status'] === 'Approved') ? 'success' : 'danger';
+                                        echo '<span class="badge bg-' . $status_badge_class . '">' . $record['document_status'] . '</span>'; 
                                     ?>
                                     </h6>
                                     <p class="mb-0 small">This record has already been reviewed on <?php echo date('F d, Y', strtotime($record['reviewed_at'])); ?>.</p>
@@ -647,9 +638,6 @@ if ($record['form_type'] === 'IDP') {
 </script>
 
 <?php
-// Close database connection
-$conn->close();
-
 // Include footer
 include_once('includes/footer.php');
 ?> 
