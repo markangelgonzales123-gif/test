@@ -1,4 +1,5 @@
 <?php
+ob_start();
 // Set page title
 $page_title = "Fill IPCR Form - EPMS";
 
@@ -74,6 +75,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_ipcr'])) {
 
         if ($update_stmt->execute()) {
             $_SESSION['success_message'] = "Your IPCR has been successfully submitted for review.";
+            header("Location: records.php");
             exit();
         } else {
             $error_message = "Error submitting IPCR: " . $conn->error;
@@ -143,6 +145,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_ipcr'])) {
                     </table>
                 </div>
 
+                <!-- Summary -->
+                <div class="card mt-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Rating Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>Strategic Functions Average:</strong>
+                                <p id="strategic-avg-display" class="fs-4 fw-bold">0.00</p>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Core Functions Average:</strong>
+                                <p id="core-avg-display" class="fs-4 fw-bold">0.00</p>
+                            </div>
+                            <div class="col-md-4" id="support-summary" style="display: none;">
+                                <strong>Support Functions Average:</strong>
+                                <p id="support-avg-display" class="fs-4 fw-bold">0.00</p>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h4>Final Average Rating:</h4>
+                                <p id="final-rating-display" class="display-4 fw-bold text-primary">0.00</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h4>Adjectival Rating:</h4>
+                                <p id="adjectival-rating" class="display-6 text-primary">Poor</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                  <div class="d-flex justify-content-end mt-4">
                     <button type="submit" name="submit_ipcr" class="btn btn-primary">
                         <i class="bi bi-check-circle me-1"></i> Submit for Review
@@ -160,6 +196,84 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_ipcr'])) {
 <script>
 $(document).ready(function() {
     const content = <?php echo json_encode($content); ?>;
+    const computationType = content.computation_type || 'Type1';
+
+    if (computationType === 'Type2') {
+        $('#support-summary').show();
+    }
+
+    function getRatingInterpretation(averageScore) {
+        const score = parseFloat(averageScore);
+        
+        if (score >= 4.5) return "Outstanding";
+        if (score >= 3.5) return "Very Satisfactory";
+        if (score >= 2.5) return "Satisfactory";
+        if (score >= 1.5) return "Unsatisfactory";
+        return "Poor";
+    }
+
+    function updateFinalRatingSummary() {
+        let strategicTotal = 0;
+        let strategicCount = 0;
+        $('tr.strategic-function-row').each(function() {
+            const avg = parseFloat($(this).find('.average-rating').val());
+            if (!isNaN(avg)) {
+                strategicTotal += avg;
+                strategicCount++;
+            }
+        });
+        const strategicAverage = strategicCount > 0 ? (strategicTotal / strategicCount) : 0;
+
+        let coreTotal = 0;
+        let coreCount = 0;
+        $('tr.core-function-row').each(function() {
+            const avg = parseFloat($(this).find('.average-rating').val());
+            if (!isNaN(avg)) {
+                coreTotal += avg;
+                coreCount++;
+            }
+        });
+        const coreAverage = coreCount > 0 ? (coreTotal / coreCount) : 0;
+
+        let supportAverage = 0;
+        if (computationType === 'Type2') {
+            let supportTotal = 0;
+            let supportCount = 0;
+            $('tr.support-function-row').each(function() {
+                const avg = parseFloat($(this).find('.average-rating').val());
+                if (!isNaN(avg)) {
+                    supportTotal += avg;
+                    supportCount++;
+                }
+            });
+            supportAverage = supportCount > 0 ? (supportTotal / supportCount) : 0;
+        }
+
+        let finalRating = 0;
+        let strategicWeighted = 0;
+        let coreWeighted = 0;
+        let supportWeighted = 0;
+
+        if (computationType === 'Type1') {
+            strategicWeighted = strategicAverage * 0.45;
+            coreWeighted = coreAverage * 0.55;
+            finalRating = strategicWeighted + coreWeighted;
+        } else { // Type2
+            strategicWeighted = strategicAverage * 0.45;
+            coreWeighted = coreAverage * 0.45;
+            supportWeighted = supportAverage * 0.10;
+            finalRating = strategicWeighted + coreWeighted + supportWeighted;
+        }
+        
+        $('#strategic-avg-display').text(strategicWeighted.toFixed(2));
+        $('#core-avg-display').text(coreWeighted.toFixed(2));
+        if (computationType === 'Type2') {
+            $('#support-avg-display').text(supportWeighted.toFixed(2));
+        }
+
+        $('#final-rating-display').text(finalRating.toFixed(2));
+        $('#adjectival-rating').text(getRatingInterpretation(finalRating));
+    }
 
     function buildRow(entry, category) {
         const cat_prefix = category.toLowerCase();
@@ -169,9 +283,9 @@ $(document).ready(function() {
             <td><textarea class="form-control form-control-sm" name="${cat_prefix}_mfo[]" readonly>${entry.mfo || ''}</textarea></td>
             <td><textarea class="form-control form-control-sm" name="${cat_prefix}_success_indicators[]" readonly>${entry.success_indicators || ''}</textarea></td>
             <td><textarea class="form-control form-control-sm" name="${cat_prefix}_accomplishments[]">${entry.accomplishments || ''}</textarea></td>
-            <td><input type="number" class="form-control form-control-sm rating-input self-rating" name="${cat_prefix}_q[]" min="1" max="5" step="1" value="${entry.q || ''}"></td>
-            <td><input type="number" class="form-control form-control-sm rating-input self-rating" name="${cat_prefix}_e[]" min="1" max="5" step="1" value="${entry.e || ''}"></td>
-            <td><input type="number" class="form-control form-control-sm rating-input self-rating" name="${cat_prefix}_t[]" min="1" max="5" step="1" value="${entry.t || ''}"></td>
+            <td><input type="number" class="form-control form-control-sm rating-input self-rating" name="${cat_prefix}_q[]" min="1" max="5" step="1" maxlength="1" value="${entry.q || ''}"></td>
+            <td><input type="number" class="form-control form-control-sm rating-input self-rating" name="${cat_prefix}_e[]" min="1" max="5" step="1" maxlength="1" value="${entry.e || ''}"></td>
+            <td><input type="number" class="form-control form-control-sm rating-input self-rating" name="${cat_prefix}_t[]" min="1" max="5" step="1" maxlength="1" value="${entry.t || ''}"></td>
             <td><input type="text" class="form-control form-control-sm average-rating" name="${cat_prefix}_a[]" value="${entry.a || ''}" readonly></td>
             <td><textarea class="form-control form-control-sm" name="${cat_prefix}_remarks[]" readonly>${entry.remarks || ''}</textarea></td>
         </tr>
@@ -195,11 +309,12 @@ $(document).ready(function() {
         }
 
         // Support Functions
-        if (content.computation_type === 'Type2' && content.support_functions && content.support_functions.length > 0) {
+        if (computationType === 'Type2' && content.support_functions && content.support_functions.length > 0) {
             tableBody.append('<tr><td colspan="8" class="text-start bg-light fw-bold">III. SUPPORT FUNCTIONS</td></tr>');
             content.support_functions.forEach(entry => tableBody.append(buildRow(entry, 'support')));
         }
         calculateAllAverages();
+        updateFinalRatingSummary();
     }
     
     function calculateAverage(row) {
@@ -224,12 +339,36 @@ $(document).ready(function() {
 
     // Event delegation for rating inputs
     $('#ipcr-table-body').on('input', '.rating-input', function() {
+        // Restrict input to single digit 1-5
+        let val = $(this).val();
+        val = val.replace(/[^1-5]/g, ''); // Allow only digits 1-5
+        if (val.length > 1) val = val.slice(0, 1); // Limit to 1 character
+        $(this).val(val);
+
         const row = $(this).closest('tr');
         calculateAverage(row);
+        updateFinalRatingSummary();
     });
 
     // Form submission serialization
     $('#fill-ipcr-form').on('submit', function(e) {
+        let missingFields = false;
+        
+        // Check editable fields (Self Ratings & Accomplishments)
+        $('.self-rating:visible').not('[readonly]').each(function() {
+            if ($(this).val() === '') missingFields = true;
+        });
+        $('textarea[name*="_accomplishments[]"]:visible').not('[readonly]').each(function() {
+            if ($(this).val().trim() === '') missingFields = true;
+        });
+
+        if (missingFields) {
+            e.preventDefault();
+            alert('Please fill in all required fields (Accomplishments and Ratings 1-5) before submitting.');
+            return false;
+        }
+
+        updateFinalRatingSummary();
         // Create a deep copy to avoid modifying the original `content` object
         let updatedContent = JSON.parse(JSON.stringify(content));
 
@@ -252,6 +391,15 @@ $(document).ready(function() {
         if (updatedContent.computation_type === 'Type2') {
             updateRowData('support');
         }
+        
+        // Add summary to content
+        updatedContent.summary = {
+            strategic_average: $('#strategic-avg-display').text(),
+            core_average: $('#core-avg-display').text(),
+            support_average: $('#support-avg-display').text(),
+            final_rating: $('#final-rating-display').text(),
+            adjectival_rating: $('#adjectival-rating').text()
+        };
 
         $('#form-content').val(JSON.stringify(updatedContent));
     });
@@ -264,4 +412,5 @@ $(document).ready(function() {
 <?php
 // Include footer
 include_once('includes/footer.php');
+ob_end_flush();
 ?>

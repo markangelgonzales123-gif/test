@@ -1,4 +1,5 @@
 <?php
+ob_start();
 // Set page title
 $page_title = "Individual Performance Commitment and Review - EPMS";
 
@@ -15,16 +16,7 @@ if (!isset($_SESSION['user_role']) || ($_SESSION['user_role'] !== 'regular_emplo
 }
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get user information
 $user_id = $_SESSION['user_id'];
@@ -171,7 +163,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['distribute_ipcr'])) {
                     // If all successful, commit the transaction
                     if ($error_count === 0 && $distributed_count > 0) {
                         $conn->commit();
-                        $success_message = "Successfully distributed IPCR forms to " . $distributed_count . " staff member(s).";
+                        $_SESSION['success_message'] = "Successfully distributed IPCR forms to " . $distributed_count . " staff member(s).";
+                        header("Location: staff_ipcr.php");
+                        exit();
                     } else {
                         // Otherwise, roll back
                         $conn->rollback();
@@ -608,4 +602,5 @@ $conn->close();
 
 // Include footer
 include_once('includes/footer.php');
+ob_end_flush();
 ?> 

@@ -55,7 +55,7 @@ while ($row = $result_recent_users->fetch_assoc()) {
 }
 
 // Recent records
-$sql_recent_records = "SELECT r.id, r.form_type, r.period, r.status, r.date_submitted, u.name as user_name 
+$sql_recent_records = "SELECT r.id, r.form_type, r.period, r.document_status, r.date_submitted, u.name as user_name 
                       FROM records r 
                       JOIN users u ON r.user_id = u.id 
                       ORDER BY r.date_submitted DESC LIMIT 5";

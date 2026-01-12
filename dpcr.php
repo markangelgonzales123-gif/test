@@ -143,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_dpcr'])) {
     
     
     $period = $_POST['period'] ?? '';
-    $status = $_POST['status'] ?? 'Draft';
+    $status = $_POST['document_status'] ?? 'Draft';
     $computation_type = $_POST['computation_type'] ?? 'Type1';
     
     // Handle date submission only if status is changing to Pending or date wasn't set for review
@@ -160,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_dpcr'])) {
             // Update existing record
             $update_record = "UPDATE records SET 
                              period = ?, 
-                             status = ?,
+                             document_status = ?,
                              date_submitted = ?,
                              computation_type = ?
                              WHERE id = ?";
@@ -179,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_dpcr'])) {
         } else {
             // Insert new record
             $form_type = 'DPCR';
-            $insert_record = "INSERT INTO records (user_id, form_type, period, status, date_submitted, computation_type) 
+            $insert_record = "INSERT INTO records (user_id, form_type, period, document_status, date_submitted, computation_type) 
                              VALUES (?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($insert_record);
             $stmt->bind_param("isssss", $user_id, $form_type, $period, $status, $date_submitted, $computation_type);
@@ -282,7 +282,7 @@ if ($record_id > 0) {
             header("Location: records.php");
             exit();
         }
-        if ($action === 'edit' && $dpcr_data['status'] !== 'Draft') {
+        if ($action === 'edit' && $dpcr_data['document_status'] !== 'Draft') {
             $_SESSION['error_message'] = "Only drafts can be edited!";
             header("Location: dpcr.php?action=view&id=" . $record_id);
             exit();
@@ -320,7 +320,7 @@ if ($record_id === 0) {
 
 // Initialize default variables for display if not set (to prevent "Undefined variable" warnings)
 $period = $dpcr_data['period'] ?? '';
-$status = $dpcr_data['status'] ?? 'Draft';
+$status = $dpcr_data['document_status'] ?? 'Draft';
 $computation_type = $dpcr_data['computation_type'] ?? 'Type1';
 
 // Determine initial weights for display
@@ -452,7 +452,7 @@ function generateEntryHtml($entry, $category, $action) {
             <a href="records.php" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back to Records
             </a>
-            <?php if ($action === 'view' && $record_id > 0 && isset($dpcr_data['status']) && $dpcr_data['status'] === 'Approved'): ?>
+            <?php if ($action === 'view' && $record_id > 0 && isset($dpcr_data['document_status']) && $dpcr_data['document_status'] === 'Approved'): ?>
             <a href="print_record.php?id=<?php echo $record_id; ?>" class="btn btn-sm btn-primary">
                 <i class="bi bi-printer"></i> Print DPCR
             </a>
@@ -599,8 +599,8 @@ function generateEntryHtml($entry, $category, $action) {
                 
                 <?php if ($action === 'new' || $action === 'edit'): ?>
                 <div class="d-flex justify-content-between mt-4 border-top pt-3">
-                    <button type="submit" name="status" value="Draft" class="btn btn-primary me-2">Save as Draft</button>
-                    <button type="submit" name="status" value="Pending" class="btn btn-success">Submit DPCR</button>
+                    <button type="submit" name="document_status" value="Draft" class="btn btn-primary me-2">Save as Draft</button>
+                    <button type="submit" name="document_status" value="Pending" class="btn btn-success">Submit DPCR</button>
                     <input type="hidden" name="save_dpcr" value="1">
                 </div>
                 <?php endif; ?>

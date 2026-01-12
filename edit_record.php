@@ -1,4 +1,5 @@
 <?php
+ob_start();
 // Set page title
 $page_title = "Edit Record - EPMS";
 
@@ -54,6 +55,9 @@ if ($user_role == 'admin' || $user_role == 'president') {
 } else if ($user_role == 'department_head' && $user_department_id == $record['department_id']) {
     // DH can edit templates, review submissions, or add comments to rejections
     if ($record['form_type'] == 'IPCR' && in_array($status, ['Distributed', 'For Review', 'Rejected'])) {
+        $can_edit = true;
+    }
+    if ($record['form_type'] == 'IDP' && in_array($status, ['Pending', 'For Review', 'Rejected'])) {
         $can_edit = true;
     }
     // Allow DH to edit DPCRs as before
@@ -120,7 +124,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->execute()) {
             $_SESSION['success_message'] = "IPCR record updated successfully.";
             if ($redirect_to_view) {
-                exit();
+                if ($user_role == 'department_head') {
+                    header("Location: staff_ipcr.php");
+                    exit();
+                } else { // employee and other roles
+                    header("Location: records.php");
+                    exit();
+                }
             } else {
                 // Refresh the page to show the "updated" message and latest data
                 header("Location: edit_record.php?id=" . $record_id . "&update=success");
@@ -128,6 +138,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } else {
             $message = "Error updating IPCR record: " . $conn->error;
+            $message_type = "danger";
+        }
+
+    // =================================================================================
+    // IDP WORKFLOW POST HANDLING
+    // =================================================================================
+    } elseif ($form_type === 'IDP') {
+        if (isset($_POST['accept_idp'])) {
+            // Initial Acceptance: Moves to 'In Progress' for employee to work on
+            $new_status = 'In Progress';
+            $update_query = "UPDATE records SET document_status = ?, reviewed_by = ?, date_reviewed = NOW() WHERE id = ?";
+            $stmt = $conn->prepare($update_query);
+            $stmt->bind_param("sii", $new_status, $user_id, $record_id);
+        } elseif (isset($_POST['approve_idp'])) {
+            // Final Approval: Moves to 'Approved'
+            $new_status = 'Approved';
+            $update_query = "UPDATE records SET document_status = ?, reviewed_by = ?, date_reviewed = NOW(), date_approved = NOW() WHERE id = ?";
+            $stmt = $conn->prepare($update_query);
+            $stmt->bind_param("sii", $new_status, $user_id, $record_id);
+        } elseif (isset($_POST['reject_idp'])) {
+            $new_status = 'Rejected';
+            $update_query = "UPDATE records SET document_status = ?, reviewed_by = ?, date_reviewed = NOW() WHERE id = ?";
+            $stmt = $conn->prepare($update_query);
+            $stmt->bind_param("sii", $new_status, $user_id, $record_id);
+        }
+
+        if ($stmt->execute()) {
+            $_SESSION['success_message'] = "IDP record updated successfully.";
+            header("Location: staff_idp.php");
+            exit();
+        } else {
+            $message = "Error updating IDP record: " . $conn->error;
             $message_type = "danger";
         }
 
@@ -332,7 +374,7 @@ switch ($record['form_type']) {
                 $status = $record['document_status'];
 
                 // DH can edit MFOs if form is just distributed or was rejected back to them for template correction
-                $dh_can_edit_template = $is_dh && ($status == 'Distributed' || $status == 'Rejected');
+                $dh_can_edit_template = $is_dh && in_array($status, ['Distributed', 'Rejected', 'For Review']);
 
                 // Employee can edit their accomplishments and ratings if it was rejected
                 $employee_can_edit_submission = $is_employee && $status == 'Rejected';
@@ -342,7 +384,7 @@ switch ($record['form_type']) {
 
                 // Field state booleans
                 $template_disabled = !$dh_can_edit_template;
-                $submission_disabled = !($employee_can_edit_submission || ($is_dh && $status == 'For Review')); // DH can see but not edit
+                $submission_disabled = !$employee_can_edit_submission; // Only employee can edit submission when allowed
                 $review_disabled = !$dh_can_review;
                 
                 // For Rejected status, employee submission fields are open
@@ -358,6 +400,8 @@ switch ($record['form_type']) {
                     $submission_disabled = false;
                     $review_disabled = false;
                 }
+                
+                $hide_supervisor_rating = $is_employee;
                 ?>
                 <div id="ipcr-edit-section">
                     <div class="table-responsive">
@@ -368,13 +412,17 @@ switch ($record['form_type']) {
                                     <th rowspan="2" class="align-middle text-center" style="width: 16%">SUCCESS INDICATORS</th>
                                     <th rowspan="2" class="align-middle text-center" style="width: 12%">ACTUAL ACCOMPLISHMENTS</th>
                                     <th colspan="4" class="text-center">SELF-RATING</th>
+                                    <?php if (!$hide_supervisor_rating): ?>
                                     <th colspan="4" class="text-center">SUPERVISOR'S RATING</th>
+                                    <?php endif; ?>
                                     <th rowspan="2" class="align-middle text-center" style="width: 10%">REMARKS / COMMENTS</th>
                                     <th rowspan="2" class="align-middle text-center" style="width: 2%"></th>
                                 </tr>
                                 <tr>
                                     <th class="text-center">Q</th><th class="text-center">E</th><th class="text-center">T</th><th class="text-center">A</th>
+                                    <?php if (!$hide_supervisor_rating): ?>
                                     <th class="text-center">Q</th><th class="text-center">E</th><th class="text-center">T</th><th class="text-center">A</th>
+                                    <?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody id="ipcr-table-body">
@@ -383,12 +431,136 @@ switch ($record['form_type']) {
                         </table>
                     </div>
 
+                    <!-- Employee Self-Rating Summary -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Self-Rating Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Strategic Functions Average:</strong>
+                                    <p id="strategic-avg-display" class="fs-4 fw-bold">0.00</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Core Functions Average:</strong>
+                                    <p id="core-avg-display" class="fs-4 fw-bold">0.00</p>
+                                </div>
+                                <div class="col-md-4" id="support-summary" style="display: none;">
+                                    <strong>Support Functions Average:</strong>
+                                    <p id="support-avg-display" class="fs-4 fw-bold">0.00</p>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h4>Final Average Rating:</h4>
+                                    <p id="final-rating-display" class="display-4 fw-bold text-primary">0.00</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h4>Adjectival Rating:</h4>
+                                    <p id="adjectival-rating" class="display-6 text-primary">Poor</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <?php if($dh_can_review): ?>
-                    <div class="mb-3">
+                    <!-- Supervisor Rating Summary -->
+                    <div class="card mt-4" id="supervisor-summary-card">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Supervisor Rating Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Strategic Functions Average:</strong>
+                                    <p id="supervisor-strategic-avg-display" class="fs-4 fw-bold">0.00</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Core Functions Average:</strong>
+                                    <p id="supervisor-core-avg-display" class="fs-4 fw-bold">0.00</p>
+                                </div>
+                                <div class="col-md-4" id="supervisor-support-summary" style="display: none;">
+                                    <strong>Support Functions Average:</strong>
+                                    <p id="supervisor-support-avg-display" class="fs-4 fw-bold">0.00</p>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h4>Final Average Rating:</h4>
+                                    <p id="supervisor-final-rating-display" class="display-4 fw-bold text-primary">0.00</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h4>Adjectival Rating:</h4>
+                                    <p id="supervisor-adjectival-rating" class="display-6 text-primary">Poor</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 mt-4">
                         <label for="dh_comments" class="form-label">Comments & Recommendations for Development</label>
                         <textarea class="form-control" id="dh_comments" name="dh_comments" rows="3"><?php echo htmlspecialchars($content['dh_comments'] ?? ''); ?></textarea>
                     </div>
                     <?php endif; ?>
+                </div>
+
+                <?php elseif ($record['form_type'] === 'IDP' && $content): ?>
+                <!-- IDP Review/Edit Form -->
+                <div id="idp-edit-section">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <strong>Review Mode:</strong> 
+                        <?php if ($status == 'Pending'): ?>
+                            This is an initial submission. Review the objectives and "Accept" to allow the employee to start their progress, or "Reject" to request changes.
+                        <?php elseif ($status == 'For Review'): ?>
+                            This is a final submission. Review the accomplishments and "Approve" to finalize, or "Reject".
+                        <?php else: ?>
+                            View only.
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-4">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 35%;">Main Objective/s</th>
+                                    <th style="width: 35%;">Plan of Action</th>
+                                    <th style="width: 30%;">Status (Accomplishment)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php 
+                                $idp_goals = $content['idp_goals'] ?? [];
+                                foreach ($idp_goals as $entry): 
+                                ?>
+                                <tr>
+                                    <td>
+                                        <textarea class="form-control" readonly rows="4"><?php echo htmlspecialchars($entry['objective'] ?? ''); ?></textarea>
+                                    </td>
+                                    <td>
+                                        <textarea class="form-control" readonly rows="4"><?php echo htmlspecialchars($entry['action_plan'] ?? ''); ?></textarea>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" readonly value="<?php echo htmlspecialchars($entry['status'] ?? 'Not Started'); ?>">
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-4">
+                        <?php if ($user_role == 'department_head' && $status == 'Pending'): ?>
+                            <button type="submit" name="reject_idp" class="btn btn-danger me-2" onclick="return confirm('Reject this initial IDP?');">Reject</button>
+                            <button type="submit" name="accept_idp" class="btn btn-success" onclick="return confirm('Accept this IDP? The employee will be notified to start their progress.');">Accept Plan</button>
+                        <?php elseif ($user_role == 'department_head' && $status == 'For Review'): ?>
+                            <button type="submit" name="reject_idp" class="btn btn-danger me-2" onclick="return confirm('Reject this IDP submission?');">Reject</button>
+                            <button type="submit" name="approve_idp" class="btn btn-success" onclick="return confirm('Approve this IDP?');">Approve</button>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <?php else: ?>
@@ -452,10 +624,10 @@ $(document).ready(function() {
                 <td><input type="text" name="budget[]" class="form-control form-control-sm"></td>
                 <td><input type="text" name="accountable[]" class="form-control form-control-sm"></td>
                 <td><input type="text" name="accomplishments[]" class="form-control form-control-sm"></td>
-                <td><input type="number" name="q1[]" class="form-control form-control-sm" min="1" max="5"></td>
-                <td><input type="number" name="q2[]" class="form-control form-control-sm" min="1" max="5"></td>
-                <td><input type="number" name="q3[]" class="form-control form-control-sm" min="1" max="5"></td>
-                <td><input type="number" name="q4[]" class="form-control form-control-sm" min="1" max="5"></td>
+                <td><input type="number" name="q1[]" class="form-control form-control-sm" min="1" max="5" step="1"></td>
+                <td><input type="number" name="q2[]" class="form-control form-control-sm" min="1" max="5" step="1"></td>
+                <td><input type="number" name="q3[]" class="form-control form-control-sm" min="1" max="5" step="1"></td>
+                <td><input type="number" name="q4[]" class="form-control form-control-sm" min="1" max="5" step="1"></td>
                 <td><button type="button" class="btn btn-sm btn-danger remove-row"><i class="bi bi-trash"></i></button></td>
             `;
             
@@ -480,9 +652,152 @@ $(document).ready(function() {
     
     if (isIpcr) {
         const content = <?php echo json_encode($content); ?>;
+        const computationType = content.computation_type || 'Type1';
         const template_disabled = <?php echo json_encode($template_disabled ?? true); ?>;
         const submission_disabled = <?php echo json_encode($submission_disabled ?? true); ?>;
         const review_disabled = <?php echo json_encode($review_disabled ?? true); ?>;
+        const hide_supervisor_rating = <?php echo json_encode($hide_supervisor_rating ?? false); ?>;
+
+    if (computationType === 'Type2') {
+        $('#support-summary').show();
+        $('#supervisor-support-summary').show();
+    }
+
+    function getRatingInterpretation(averageScore) {
+        const score = parseFloat(averageScore);
+        
+        if (score >= 4.5) return "Outstanding";
+        if (score >= 3.5) return "Very Satisfactory";
+        if (score >= 2.5) return "Satisfactory";
+        if (score >= 1.5) return "Unsatisfactory";
+        return "Poor";
+    }
+
+        function updateSupervisorRatingSummary() {
+            let strategicTotal = 0;
+            let strategicCount = 0;
+            $('tr.strategic-function-row').each(function() {
+                const avg = parseFloat($(this).find('.supervisor-average-rating').val());
+                if (!isNaN(avg)) {
+                    strategicTotal += avg;
+                    strategicCount++;
+                }
+            });
+            const strategicAverage = strategicCount > 0 ? (strategicTotal / strategicCount) : 0;
+            
+            let coreTotal = 0;
+            let coreCount = 0;
+            $('tr.core-function-row').each(function() {
+                const avg = parseFloat($(this).find('.supervisor-average-rating').val());
+                if (!isNaN(avg)) {
+                    coreTotal += avg;
+                    coreCount++;
+                }
+            });
+            const coreAverage = coreCount > 0 ? (coreTotal / coreCount) : 0;
+            
+            let supportAverage = 0;
+            if (computationType === 'Type2') {
+                let supportTotal = 0;
+                let supportCount = 0;
+                $('tr.support-function-row').each(function() {
+                    const avg = parseFloat($(this).find('.supervisor-average-rating').val());
+                    if (!isNaN(avg)) {
+                        supportTotal += avg;
+                        supportCount++;
+                    }
+                });
+                supportAverage = supportCount > 0 ? (supportTotal / supportCount) : 0;
+            }
+
+            let finalRating = 0;
+            let strategicWeighted = 0;
+            let coreWeighted = 0;
+            let supportWeighted = 0;
+
+            if (computationType === 'Type1') {
+                strategicWeighted = strategicAverage * 0.45;
+                coreWeighted = coreAverage * 0.55;
+                finalRating = strategicWeighted + coreWeighted;
+            } else { // Type2
+                strategicWeighted = strategicAverage * 0.45;
+                coreWeighted = coreAverage * 0.45;
+                supportWeighted = supportAverage * 0.10;
+                finalRating = strategicWeighted + coreWeighted + supportWeighted;
+            }
+
+            $('#supervisor-strategic-avg-display').text(strategicWeighted.toFixed(2));
+            $('#supervisor-core-avg-display').text(coreWeighted.toFixed(2));
+             if (computationType === 'Type2') {
+                $('#supervisor-support-avg-display').text(supportWeighted.toFixed(2));
+            }
+            
+            $('#supervisor-final-rating-display').text(finalRating.toFixed(2));
+            $('#supervisor-adjectival-rating').text(getRatingInterpretation(finalRating));
+        }
+
+        function updateEmployeeRatingSummary() {
+            let strategicTotal = 0;
+            let strategicCount = 0;
+            $('tr.strategic-function-row').each(function() {
+                const avg = parseFloat($(this).find('.average-rating').val());
+                if (!isNaN(avg)) {
+                    strategicTotal += avg;
+                    strategicCount++;
+                }
+            });
+            const strategicAverage = strategicCount > 0 ? (strategicTotal / strategicCount) : 0;
+            
+            let coreTotal = 0;
+            let coreCount = 0;
+            $('tr.core-function-row').each(function() {
+                const avg = parseFloat($(this).find('.average-rating').val());
+                if (!isNaN(avg)) {
+                    coreTotal += avg;
+                    coreCount++;
+                }
+            });
+            const coreAverage = coreCount > 0 ? (coreTotal / coreCount) : 0;
+            
+            let supportAverage = 0;
+            if (computationType === 'Type2') {
+                let supportTotal = 0;
+                let supportCount = 0;
+                $('tr.support-function-row').each(function() {
+                    const avg = parseFloat($(this).find('.average-rating').val());
+                    if (!isNaN(avg)) {
+                        supportTotal += avg;
+                        supportCount++;
+                    }
+                });
+                supportAverage = supportCount > 0 ? (supportTotal / supportCount) : 0;
+            }
+
+            let finalRating = 0;
+            let strategicWeighted = 0;
+            let coreWeighted = 0;
+            let supportWeighted = 0;
+
+            if (computationType === 'Type1') {
+                strategicWeighted = strategicAverage * 0.45;
+                coreWeighted = coreAverage * 0.55;
+                finalRating = strategicWeighted + coreWeighted;
+            } else { // Type2
+                strategicWeighted = strategicAverage * 0.45;
+                coreWeighted = coreAverage * 0.45;
+                supportWeighted = supportAverage * 0.10;
+                finalRating = strategicWeighted + coreWeighted + supportWeighted;
+            }
+
+            $('#strategic-avg-display').text(strategicWeighted.toFixed(2));
+            $('#core-avg-display').text(coreWeighted.toFixed(2));
+             if (computationType === 'Type2') {
+                $('#support-avg-display').text(supportWeighted.toFixed(2));
+            }
+            
+            $('#final-rating-display').text(finalRating.toFixed(2));
+            $('#adjectival-rating').text(getRatingInterpretation(finalRating));
+        }
 
         const renderIpcrTable = () => {
             const tableBody = $('#ipcr-table-body');
@@ -491,7 +806,8 @@ $(document).ready(function() {
             const buildSection = (title, category, entries) => {
                 if (!entries || entries.length === 0) return;
 
-                tableBody.append(`<tr><td colspan="12" class="text-start bg-light fw-bold">${title}</td></tr>`);
+                const colSpan = hide_supervisor_rating ? 9 : 13;
+                tableBody.append(`<tr><td colspan="${colSpan}" class="text-start bg-light fw-bold">${title}</td></tr>`);
                 
                 entries.forEach(entry => {
                     const row = `
@@ -499,15 +815,25 @@ $(document).ready(function() {
                             <td><textarea class="form-control form-control-sm" name="${category}_mfo[]" ${template_disabled ? 'readonly' : ''}>${entry.mfo || ''}</textarea></td>
                             <td><textarea class="form-control form-control-sm" name="${category}_success_indicators[]" ${template_disabled ? 'readonly' : ''}>${entry.success_indicators || ''}</textarea></td>
                             <td><textarea class="form-control form-control-sm" name="${category}_accomplishments[]" ${submission_disabled ? 'readonly' : ''}>${entry.accomplishments || ''}</textarea></td>
-                            <td><input type="number" class="form-control form-control-sm rating-input self-rating" name="${category}_q[]" min="1" max="5" value="${entry.q || ''}" ${submission_disabled ? 'readonly' : ''}></td>
-                            <td><input type="number" class="form-control form-control-sm rating-input self-rating" name="${category}_e[]" min="1" max="5" value="${entry.e || ''}" ${submission_disabled ? 'readonly' : ''}></td>
-                            <td><input type="number" class="form-control form-control-sm rating-input self-rating" name="${category}_t[]" min="1" max="5" value="${entry.t || ''}" ${submission_disabled ? 'readonly' : ''}></td>
+                            <td><input type="number" class="form-control form-control-sm rating-input self-rating" name="${category}_q[]" min="1" max="5" step="1" maxlength="1" value="${entry.q || ''}" ${submission_disabled ? 'readonly' : ''}></td>
+                            <td><input type="number" class="form-control form-control-sm rating-input self-rating" name="${category}_e[]" min="1" max="5" step="1" maxlength="1" value="${entry.e || ''}" ${submission_disabled ? 'readonly' : ''}></td>
+                            <td><input type="number" class="form-control form-control-sm rating-input self-rating" name="${category}_t[]" min="1" max="5" step="1" maxlength="1" value="${entry.t || ''}" ${submission_disabled ? 'readonly' : ''}></td>
                             <td><input type="text" class="form-control form-control-sm average-rating" name="${category}_a[]" value="${entry.a || ''}" readonly></td>
-                            <td><input type="number" class="form-control form-control-sm rating-input supervisor-rating" name="${category}_supervisor_q[]" min="1" max="5" value="${entry.supervisor_q || ''}" ${review_disabled ? 'readonly' : ''}></td>
-                            <td><input type="number" class="form-control form-control-sm rating-input supervisor-rating" name="${category}_supervisor_e[]" min="1" max="5" value="${entry.supervisor_e || ''}" ${review_disabled ? 'readonly' : ''}></td>
-                            <td><input type="number" class="form-control form-control-sm rating-input supervisor-rating" name="${category}_supervisor_t[]" min="1" max="5" value="${entry.supervisor_t || ''}" ${review_disabled ? 'readonly' : ''}></td>
+                            ${!hide_supervisor_rating ? `
+                            <td><input type="number" class="form-control form-control-sm rating-input supervisor-rating" name="${category}_supervisor_q[]" min="1" max="5" step="1" maxlength="1" value="${entry.supervisor_q || ''}" ${review_disabled ? 'readonly' : ''}></td>
+                            <td><input type="number" class="form-control form-control-sm rating-input supervisor-rating" name="${category}_supervisor_e[]" min="1" max="5" step="1" maxlength="1" value="${entry.supervisor_e || ''}" ${review_disabled ? 'readonly' : ''}></td>
+                            <td><input type="number" class="form-control form-control-sm rating-input supervisor-rating" name="${category}_supervisor_t[]" min="1" max="5" step="1" maxlength="1" value="${entry.supervisor_t || ''}" ${review_disabled ? 'readonly' : ''}></td>
                             <td><input type="text" class="form-control form-control-sm supervisor-average-rating" name="${category}_supervisor_a[]" value="${entry.supervisor_a || ''}" readonly></td>
-                            <td><textarea class="form-control form-control-sm" name="${category}_remarks[]" ${template_disabled && review_disabled ? 'readonly' : ''}>${entry.remarks || ''}</textarea></td>
+                            ` : ''}
+                            <td>
+                                <textarea class="form-control form-control-sm" name="${category}_remarks[]" ${review_disabled ? 'readonly' : ''}>${entry.remarks || ''}</textarea>
+                                ${hide_supervisor_rating ? `
+                                <input type="hidden" name="${category}_supervisor_q[]" min="1" max="5" step="1" maxlength="1" value="${entry.supervisor_q || ''}">
+                                <input type="hidden" name="${category}_supervisor_e[]" min="1" max="5" step="1" maxlength="1" value="${entry.supervisor_e || ''}">
+                                <input type="hidden" name="${category}_supervisor_t[]" min="1" max="5" step="1" maxlength="1" value="${entry.supervisor_t || ''}">
+                                <input type="hidden" name="${category}_supervisor_a[]" value="${entry.supervisor_a || ''}">
+                                ` : ''}
+                            </td>
                             <td></td> <!-- Placeholder for remove button if needed -->
                         </tr>
                     `;
@@ -520,6 +846,8 @@ $(document).ready(function() {
             if (content.computation_type === 'Type2') {
                  buildSection('III. SUPPORT FUNCTIONS', 'support', content.support_functions);
             }
+            updateSupervisorRatingSummary();
+            updateEmployeeRatingSummary();
         };
 
         const calculateRowAverage = (row) => {
@@ -529,15 +857,32 @@ $(document).ready(function() {
                 const t = parseFloat($(row).find(`input[name$="${prefix}_t[]"]`).val()) || 0;
                 let count = (q > 0 ? 1:0) + (e > 0 ? 1:0) + (t > 0 ? 1:0);
                 const avg = count > 0 ? ((q + e + t) / count).toFixed(2) : '';
-                const target_a = (prefix === '') ? 'a' : `supervisor_a`;
-                $(row).find(`input[name$="${target_a}[]"]`).val(avg);
+                
+                let target_a_selector;
+                if (prefix === 'supervisor') {
+                    target_a_selector = `input[name$="supervisor_a[]"]`;
+                } else {
+                    target_a_selector = `input[name$="a[]"]:not([name*="supervisor"])`;
+                }
+                $(row).find(target_a_selector).val(avg);
             };
             calculate(''); // Self-rating
             calculate('supervisor'); // Supervisor rating
         };
 
         $('#ipcr-table-body').on('input', '.rating-input', function() {
+            // Restrict input to single digit 1-5
+            let val = $(this).val();
+            val = val.replace(/[^1-5]/g, ''); // Allow only digits 1-5
+            if (val.length > 1) val = val.slice(0, 1); // Limit to 1 character
+            $(this).val(val);
+
             calculateRowAverage($(this).closest('tr'));
+            if ($(this).hasClass('supervisor-rating')) {
+                updateSupervisorRatingSummary();
+            } else {
+                updateEmployeeRatingSummary();
+            }
         });
         
         renderIpcrTable();
@@ -547,6 +892,59 @@ $(document).ready(function() {
     // FORM SUBMISSION HANDLING (BOTH DPCR and IPCR)
     // =================================================================================
     $('#edit-form').on('submit', function(e) {
+        const submitter = e.originalEvent.submitter;
+
+        if (submitter) {
+            // --- Validation for Employee Resubmission ---
+            if (submitter.name === 'resubmit_ipcr') {
+                let missingFields = false;
+                
+                $('.self-rating:visible:not([readonly])').each(function() {
+                    if ($(this).val() === '') {
+                        missingFields = true;
+                    }
+                });
+                $('textarea[name*="_accomplishments[]"]:visible:not([readonly])').each(function() {
+                    if ($(this).val().trim() === '') {
+                        missingFields = true;
+                    }
+                });
+
+                if (missingFields) {
+                    e.preventDefault();
+                    alert('Please fill in all your required fields (Accomplishments and Self-Ratings 1-5) before resubmitting.');
+                    return false;
+                }
+            }
+            // --- Validation for DH Approval ---
+            else if (submitter.name === 'approve_ipcr') {
+                let missingFields = false;
+                
+                // Check supervisor ratings
+                $('.supervisor-rating:visible:not([readonly])').each(function() {
+                    if ($(this).val() === '') {
+                        missingFields = true;
+                    }
+                });
+
+                if (missingFields) {
+                    e.preventDefault();
+                    alert('Please fill in all Supervisor Rating fields (Q, E, T) before approving.');
+                    return false;
+                }
+            }
+            // --- Validation for DH Rejection ---
+            else if (submitter.name === 'reject_ipcr') {
+                // The 'dh_comments' field is only required for rejection if it's visible.
+                const dhCommentsField = $('#dh_comments');
+                if (dhCommentsField.length > 0 && dhCommentsField.is(':visible') && dhCommentsField.val().trim() === '') {
+                    e.preventDefault();
+                    alert('Please provide comments or recommendations in the "Comments & Recommendations for Development" field before rejecting.');
+                    return false;
+                }
+            }
+        }
+        
         // --- DPCR Serialization ---
         if ('<?php echo $record['form_type']; ?>' === 'DPCR') {
             const dpcrData = { entries: [] };
@@ -567,6 +965,7 @@ $(document).ready(function() {
 
         // --- IPCR Serialization ---
         if (isIpcr) {
+            updateSupervisorRatingSummary();
             let updatedContent = JSON.parse(JSON.stringify(<?php echo json_encode($content); ?>));
             
             const updateSection = (category) => {
@@ -601,6 +1000,15 @@ $(document).ready(function() {
                  updatedContent.dh_comments = $('#dh_comments').val();
             }
 
+            // Add supervisor summary to content
+            updatedContent.supervisor_summary = {
+                strategic_average: $('#supervisor-strategic-avg-display').text(),
+                core_average: $('#supervisor-core-avg-display').text(),
+                support_average: $('#supervisor-support-avg-display').text(),
+                final_rating: $('#supervisor-final-rating-display').text(),
+                adjectival_rating: $('#supervisor-adjectival-rating').text()
+            };
+
             $('#form-content-json').val(JSON.stringify(updatedContent));
         }
     });
@@ -610,4 +1018,5 @@ $(document).ready(function() {
 <?php
 // Include footer
 include_once('includes/footer.php');
+ob_end_flush();
 ?> 

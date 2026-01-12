@@ -104,7 +104,16 @@ function isFormCompleteAndRated($form_data, $form_type) {
             // For IDP, check if there's at least one development goal
             $has_entries = false;
             
-            if (isset($form_data['professional_development']) && is_array($form_data['professional_development'])) {
+            if (isset($form_data['idp_goals']) && is_array($form_data['idp_goals'])) {
+                foreach ($form_data['idp_goals'] as $entry) {
+                    if (!empty($entry['objective']) && !empty($entry['action_plan'])) {
+                        $has_entries = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!$has_entries && isset($form_data['professional_development']) && is_array($form_data['professional_development'])) {
                 foreach ($form_data['professional_development'] as $entry) {
                     if (!empty($entry['goals']) && !empty($entry['actions'])) {
                         $has_entries = true;
@@ -171,7 +180,7 @@ function routeFormToDepartmentHead($conn, $record_id, $user_id) {
     $stmt->execute();
     
     // Update record status to Pending
-    $update_query = "UPDATE records SET status = 'Pending', date_submitted = NOW() WHERE id = ?";
+    $update_query = "UPDATE records SET document_status = 'Pending', date_submitted = NOW() WHERE id = ?";
     $stmt = $conn->prepare($update_query);
     $stmt->bind_param("i", $record_id);
     $stmt->execute();
@@ -210,7 +219,7 @@ function submitForm($conn, $user_id, $form_type, $period, $content) {
                     FROM records 
                     WHERE user_id = ? 
                       AND form_type = ? 
-                      AND status NOT IN ('Draft', 'Rejected')
+                      AND document_status NOT IN ('Draft', 'Rejected')
                       AND YEAR(date_submitted) = ?
                       AND MONTH(date_submitted) BETWEEN ? AND ?";
                       
@@ -255,7 +264,7 @@ function submitForm($conn, $user_id, $form_type, $period, $content) {
         // Insert new record
         $conn->begin_transaction();
         
-        $insert_query = "INSERT INTO records (user_id, form_type, period, content, status) 
+        $insert_query = "INSERT INTO records (user_id, form_type, period, content, document_status) 
                         VALUES (?, ?, ?, ?, 'Draft')";
         
         $content_json = is_string($content) ? $content : json_encode($content);
@@ -335,7 +344,7 @@ function approveForm($conn, $record_id, $reviewer_id, $ratings, $feedback = '', 
         // Update record
         $update_query = "UPDATE records SET 
                         content = ?, 
-                        status = 'Approved', 
+                        document_status = 'Approved', 
                         reviewed_by = ?, 
                         date_reviewed = NOW(),
                         feedback = ?,
@@ -401,7 +410,7 @@ function rejectForm($conn, $record_id, $reviewer_id, $feedback, $remarks = '') {
         
         // Update record
         $update_query = "UPDATE records SET 
-                        status = 'Rejected', 
+                        document_status = 'Rejected', 
                         reviewed_by = ?, 
                         date_reviewed = NOW(),
                         feedback = ?,

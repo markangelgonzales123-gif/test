@@ -52,6 +52,7 @@ switch ($_SESSION['user_role']) {
             ['icon' => 'bi bi-building', 'title' => 'Department DPCR', 'url' => $base_path . 'dpcr.php', 'active' => ($current_page == 'dpcr.php')],
             ['icon' => 'bi bi-person-vcard', 'title' => 'My IPCR', 'url' => $base_path . 'ipcr.php', 'active' => ($current_page == 'ipcr.php')],
             ['icon' => 'bi bi-people', 'title' => 'Staff IPCR', 'url' => $base_path . 'staff_ipcr.php', 'active' => ($current_page == 'staff_ipcr.php')],
+            ['icon' => 'bi bi-journal-text', 'title' => 'Staff IDP', 'url' => $base_path . 'staff_idp.php', 'active' => ($current_page == 'staff_idp.php')],
             ['icon' => 'bi bi-journal-text', 'title' => 'My IDP', 'url' => $base_path . 'idp.php', 'active' => ($current_page == 'idp.php')],
             ['icon' => 'bi bi-file-earmark-person', 'title' => 'My PDS', 'url' => $base_path . 'pdsT2.php', 'active' => ($current_page == 'pdsT2.php')],
             ['icon' => 'bi bi-list-check', 'title' => 'My Records', 'url' => $base_path . 'records.php', 'active' => ($current_page == 'records.php')],

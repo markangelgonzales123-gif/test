@@ -22,16 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error_message = "Name and email are required fields";
     } else {
         // Database connection
-        $host = "localhost";
-        $username = "root";
-        $password = "";
-        $database = "epms_db";
-        
-        $conn = new mysqli($host, $username, $password, $database);
-        
-        if ($conn->connect_error) {
-            die("Connection failed: " . $conn->connect_error);
-        }
+        require_once 'includes/db_connect.php';
         
         // Update user profile
         $user_id = $_SESSION['user_id'];
@@ -110,16 +101,7 @@ $user_avatar = null;
 $department_name = "";
 
 // Database connection
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "epms_db";
-
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'includes/db_connect.php';
 
 // Get department name and user avatar
 $sql = "SELECT d.name, u.avatar FROM departments d JOIN users u ON d.id = u.department_id WHERE u.id = ?";

@@ -33,7 +33,6 @@ if (isset($_GET['token']) && !empty($_GET['token'])) {
         $message = "Invalid or expired token. Please request a new password reset link.";
         $message_type = "danger";
     }
-    var_dump("deyum");
 } else {
     $message = "No reset token provided. Please request a password reset from the forgot password page.";
     $message_type = "danger";

@@ -5,6 +5,14 @@ $page_title = "Staff IPCR - EPMS";
 // Include header
 include_once('includes/header.php');
 
+// Check for success or error messages
+$success_message = isset($_SESSION['success_message']) ? $_SESSION['success_message'] : '';
+$error_message = isset($_SESSION['error_message']) ? $_SESSION['error_message'] : '';
+
+// Clear session messages
+unset($_SESSION['success_message']);
+unset($_SESSION['error_message']);
+
 // Check if user has the right role to access this page
 if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'department_head') {
     header("Location: access_denied.php");
@@ -145,6 +153,19 @@ $periods_result = $stmt->get_result();
             </button>
         </div>
     </div>
+
+    <?php if ($success_message): ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <?php echo $success_message; ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <?php endif; ?>
+    <?php if ($error_message): ?>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <?php echo $error_message; ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <?php endif; ?>
     
     <!-- Notification for new submissions -->
     <?php 
